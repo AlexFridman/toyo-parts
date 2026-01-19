@@ -1,0 +1,11 @@
+{
+  "s3": {
+    "bucket": "toyo-parts-photos",
+    "region": "eu-central-1",
+    "base_url": ""
+  },
+  "paths": {
+    "photos_prefix": "photos",
+    "thumbs_prefix": "photos_thumb"
+  }
+}

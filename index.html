@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>4Runner Разбор — каталог запчастей</title>
+  <link rel="stylesheet" href="style.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="title" id="brandTitle" data-i18n="brandTitle">4Runner Разбор</div>
+      <div class="subtitle" id="brandSubtitle" data-i18n="brandSubtitle">Поиск по номеру запчасти и по описанию</div>
+    </div>
+    <div class="controls">
+      <input id="q" type="search" placeholder="Поиск: номер / название / описание..." data-i18n-placeholder="searchPlaceholder" autocomplete="off" />
+      <select id="section">
+        <option value="" data-i18n="allSections">Все разделы</option>
+      </select>
+      <select id="sort" aria-label="Sort">
+        <option value="num_asc" data-i18n="sortNumAsc">№ по возрастанию</option>
+        <option value="sec_asc" data-i18n="sortSecAsc">Раздел A→Z</option>
+        <option value="sec_desc" data-i18n="sortSecDesc">Раздел Z→A</option>
+      </select>
+      <label class="chk"><input id="onlyWithPhoto" type="checkbox" /> <span data-i18n="onlyWithPhoto">Только с фото</span></label>
+      <button id="clear" type="button" data-i18n="clear">Очистить</button>
+      <button id="langToggle" type="button" class="langbtn" aria-label="Switch language">Հայ / RU</button>
+      <a class="callbtn" id="callBtn" href="tel:+37441153113" data-i18n="callBtn">Позвонить +374 41 153113</a>
+      <a class="wabtn" id="waBtn" href="https://wa.me/37533678686" target="_blank" rel="noopener" data-i18n="waBtn">WhatsApp</a>
+      <a class="tgbtn" id="tgBtn" href="https://t.me/alexfridman" target="_blank" rel="noopener" data-i18n="tgBtn">Telegram</a>
+    </div>
+  </header>
+
+  <main class="container">
+    <div id="stats" class="stats"></div>
+    <div id="cards" class="grid"></div>
+  </main>
+
+  <footer class="footer">
+    <div>
+      <span class="muted">GitHub Pages • статический сайт</span>
+      <span class="dot">•</span>
+      <a class="muted" href="#" id="how" data-i18n="howAddPhotos">как добавить фото</a>
+    </div>
+  </footer>
+
+  <dialog id="howDlg">
+    <h3 data-i18n="howTitle">Как добавить фото</h3>
+    <p>
+      В репозитории создайте папку <code>photos/</code> и внутри папки по номеру позиции, например:
+      <code>photos/250/</code>.
+      Положите туда изображения (<code>.jpg</code>, <code>.jpeg</code>, <code>.png</code>, <code>.webp</code>).
+      Сайт покажет первое фото из индекса и будет знать, сколько фото в папке.
+    </p>
+    <p class="muted">
+      Важно: GitHub Pages не умеет “листать” файлы папки на сервере.
+      Поэтому мы генерируем файл <code>photos_index.json</code> скриптом, который обходит папки с фото.
+    </p>
+    <div class="dlg-actions">
+      <button id="closeHow" type="button" data-i18n="close">Закрыть</button>
+    </div>
+  </dialog>
+
+  <dialog id="galleryDlg">
+    <div class="ghead">
+      <div>
+        <div id="gTitle" class="gtitle"></div>
+        <div id="gSub" class="gsub"></div>
+      </div>
+      <button id="gClose" type="button" class="gclose">✕</button>
+    </div>
+    <div class="gbody">
+      <img id="gMain" class="gmain" alt="Фото" />
+      <div id="gThumbs" class="gthumbs"></div>
+    </div>
+  </dialog>
+
+</body>
+</html>

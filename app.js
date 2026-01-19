@@ -1,0 +1,576 @@
+
+
+let DATA = [];
+let fuse = null;
+let PHOTOS = {}; // { id: ["photos/<id>/a.jpg", ...] }
+let BY_ID = {};  // { id: record }
+
+const I18N = {
+  ru: {
+    found: (n, total) => `Найдено: ${n} / ${total}`,
+    position: (id) => `Позиция #${id}`,
+    notFound: "Позиция не найдена",
+    noPhoto: "Фото не найдено",
+    loadError: "Ошибка загрузки данных. Проверьте data.json",
+    allSections: "Все разделы",
+    onlyWithPhoto: "Только с фото",
+    clear: "Очистить",
+    howAddPhotos: "как добавить фото",
+    howTitle: "Как добавить фото",
+    close: "Закрыть",
+    searchPlaceholder: "Поиск: номер / название / описание...",
+    brandTitle: "4Runner Разбор",
+    brandSubtitle: "Поиск по номеру запчасти и по описанию",
+    callBtn: "Позвонить +374 41 153113",
+    waBtn: "WhatsApp",
+    tgBtn: "Telegram",
+
+    sortNumAsc: "№ по возрастанию",
+    sortSecAsc: "Раздел A→Z",
+    sortSecDesc: "Раздел Z→A",
+    waBtn: "WhatsApp",
+    tgBtn: "Telegram",
+
+    sortNumAsc: "№ по возрастанию",
+    sortSecAsc: "Раздел A→Z",
+    sortSecDesc: "Раздел Z→A",
+
+    // UI labels
+    sectionLabel: "Раздел",
+    categoryLabel: "Категория",
+    catalogLabel: "Каталожное",
+    partNoLabel: "№ детали",
+    boxLabel: "коробка",
+    photoCountLabel: "фото",
+    damageBadge: "повреждения",
+    tuningBadge: "тюнинг",
+    photoBadge: "есть фото",
+    damageLabel: "Повреждения",
+  },
+  hy: {
+    found: (n, total) => `Գտնվել է՝ ${n} / ${total}`,
+    position: (id) => `Դիրք #${id}`,
+    notFound: "Դիրքը չի գտնվել",
+    noPhoto: "Լուսանկար չկա",
+    loadError: "Տվյալների բեռնումը ձախողվեց. Ստուգեք data.json-ը",
+    allSections: "Բոլոր բաժինները",
+    onlyWithPhoto: "Միայն լուսանկարով",
+    clear: "Մաքրել",
+    howAddPhotos: "ինչպես ավելացնել լուսանկարներ",
+    howTitle: "Ինչպես ավելացնել լուսանկարներ",
+    close: "Փակել",
+    searchPlaceholder: "Փնտրում՝ համար / անվանում / նկարագրություն...",
+    brandTitle: "4Runner Քանդում",
+    brandSubtitle: "Փնտրում՝ համարով ու նկարագրությամբ",
+    callBtn: "Զանգել +374 41 153113",
+    waBtn: "WhatsApp",
+    tgBtn: "Telegram",
+
+    sortNumAsc: "№ աճմամբ",
+    sortSecAsc: "Բաժին A→Z",
+    sortSecDesc: "Բաժին Z→A",
+    waBtn: "WhatsApp",
+    tgBtn: "Telegram",
+
+    sortNumAsc: "Համար ↑",
+    sortSecAsc: "Բաժին A→Z",
+    sortSecDesc: "Բաժին Z→A",
+
+    // UI labels
+    sectionLabel: "Բաժին",
+    categoryLabel: "Կատեգորիա",
+    catalogLabel: "Կատալոգային",
+    partNoLabel: "Դետալի №",
+    boxLabel: "արկղ",
+    photoCountLabel: "լուսանկար",
+    damageBadge: "վնասվածք",
+    tuningBadge: "թյունինգ",
+    photoBadge: "կա ֆոտո",
+    damageLabel: "Վնասվածքներ",
+  }
+};
+
+let LANG = "ru";
+
+const $ = (id) => document.getElementById(id);
+
+
+function langFromPath(){
+  const p = window.location.pathname;
+  const m = p.match(/^\/(ru|hy)(\/|$)/);
+  if(m) return m[1];
+  return "ru";
+}
+function withLangPrefix(path){
+  // path like "/part/250" or "/"
+  if(!path.startsWith("/")) path = "/" + path;
+  if(LANG === "ru") return path; // default (no prefix) for RU
+  // ensure single slash
+  return `/${LANG}` + path;
+}
+
+function stripLangPrefix(pathname){
+  // removes leading /ru or /hy
+  return pathname.replace(/^\/(ru|hy)(?=\/|$)/, "");
+}
+
+function switchLanguage(){
+  const base = stripLangPrefix(window.location.pathname) || "/";
+  const targetLang = (LANG === "ru") ? "hy" : "ru";
+  if(targetLang === "ru"){
+    window.location.href = base + window.location.search + window.location.hash;
+  }else{
+    // ensure leading slash
+    const p = base.startsWith("/") ? base : ("/" + base);
+    window.location.href = `/${targetLang}` + p + window.location.search + window.location.hash;
+  }
+}
+function applyI18n(){
+  const dict = I18N[LANG] || I18N.ru;
+
+  // Update <html lang="..."> for accessibility/SEO
+  try{ document.documentElement.lang = LANG; }catch(e){}
+
+  // Placeholder
+  const q = $("q");
+  if(q) q.placeholder = dict.searchPlaceholder;
+
+  // Brand text
+  const bt = $("brandTitle");
+  const bs = $("brandSubtitle");
+  if(bt) bt.textContent = dict.brandTitle;
+  if(bs) bs.textContent = dict.brandSubtitle;
+
+  // Call button label
+  const cb = $("callBtn");
+  if(cb) cb.textContent = dict.callBtn;
+
+  // Static labels via data-i18n
+  document.querySelectorAll("[data-i18n]").forEach(el=>{
+    const key = el.getAttribute("data-i18n");
+    if(dict[key]) el.textContent = dict[key];
+  });
+
+  // Option label for all sections
+  const opt = document.querySelector('option[value=""][data-i18n="allSections"]');
+  if(opt) opt.textContent = dict.allSections;
+
+  // Checkbox label: we wrapped in span[data-i18n="onlyWithPhoto"]
+  // Clear button already has data-i18n
+
+  // Dialog title/button
+  const howTitle = document.querySelector('[data-i18n="howTitle"]');
+  if(howTitle) howTitle.textContent = dict.howTitle;
+  const close = document.querySelector('[data-i18n="close"]');
+  if(close) close.textContent = dict.close;
+
+  // Footer link
+  const how = $("how");
+  if(how) how.textContent = dict.howAddPhotos;
+
+  // Language button text
+  const btn = $("langToggle");
+  if(btn){
+    btn.textContent = (LANG === "ru") ? "Հայ" : "RU";
+    btn.title = (LANG === "ru") ? "Փոխել լեզուն" : "Сменить язык";
+  }
+
+  // If in /hy prefix, adjust call button? keep RU number label.
+}
+
+function getField(r, base){
+  // Uses *_hy when LANG=hy (if non-empty), otherwise falls back to RU.
+  if(LANG === "hy"){
+    const hyKey = `${base}_hy`;
+    const v = r?.[hyKey];
+    if(v !== undefined && v !== null && String(v).trim() !== "") return v;
+  }
+  return r?.[base];
+}
+
+function truthyFlag(v){
+  if(v === true) return true;
+  if(v === false || v === null || v === undefined) return false;
+  const s = String(v).trim().toLowerCase();
+  if(!s) return false;
+  if(["true","1","yes","y","да","есть"].includes(s)) return true;
+  if(["false","0","no","n","нет"].includes(s)) return false;
+  // any other non-empty string -> treat as true (e.g., "царапины")
+  return true;
+}
+
+
+function normalizeStr(s){
+  return (s ?? "").toString().trim();
+}
+
+async function loadPhotosIndex(){
+  try{
+    const res = await fetch("photos_index.json");
+    if(res.ok){
+      PHOTOS = await res.json();
+    }else{
+      PHOTOS = {};
+    }
+  }catch(e){
+    PHOTOS = {};
+  }
+}
+
+function photosEntry(id){
+  return PHOTOS?.[String(id)];
+}
+function imagesFullFor(id){
+  const rec = BY_ID?.[String(id)];
+  if(rec && Array.isArray(rec.images_full) && rec.images_full.length) return rec.images_full;
+  const e = photosEntry(id);
+  if(Array.isArray(e)) return e;
+  if(e && Array.isArray(e.full)) return e.full;
+  return [];
+}
+function imagesThumbFor(id){
+  const rec = BY_ID?.[String(id)];
+  if(rec && Array.isArray(rec.images_thumb) && rec.images_thumb.length) return rec.images_thumb;
+  const e = photosEntry(id);
+  if(e && Array.isArray(e.thumb)) return e.thumb;
+  const full = imagesFullFor(id);
+  return full.map(u => u.replace(/^photos\//, "photos_thumb/"));
+}
+function coverImageFor(id){
+  const thumbs = imagesThumbFor(id);
+  if(thumbs.length) return thumbs[0];
+  const full = imagesFullFor(id);
+  return full.length ? full[0] : null;
+}
+
+
+function buildSections(records){
+  const set = new Set();
+  for(const r of records){
+    const sec = getField(r, "Раздел");
+    if(sec) set.add(sec);
+  }
+  const sections = Array.from(set).sort((a,b)=>a.localeCompare(b,'ru'));
+  const sel = $("section");
+  for(const s of sections){
+    const opt = document.createElement("option");
+    opt.value = s;
+    opt.textContent = s;
+    sel.appendChild(opt);
+  }
+}
+
+
+function cardHtml(r, imgUrl){
+  const dict = I18N[LANG] || I18N.ru;
+
+  const num = r["Номер"] ?? "";
+  const name = getField(r, "Название") ?? "";
+  const pn = r["Номер запчасти"] ?? "";
+  const sec = getField(r, "Раздел") ?? "";
+  const cat = getField(r, "Детальная категория") ?? "";
+  const catName = getField(r, "Каталожное название") ?? "";
+  const desc = getField(r, "Описание") ?? "";
+  const damaged = getField(r, "Есть повреждения");
+  const tuning = r["Тюнинг"];
+  const hasPhoto = r["Есть фото"];
+  const box = r["Коробка"];
+
+  const badges = [];
+  if(truthyFlag(damaged)) badges.push(`<span class="badge warn">${escapeHtml(dict.damageBadge)}</span>`);
+  if(truthyFlag(tuning)) badges.push(`<span class="badge good">${escapeHtml(dict.tuningBadge)}</span>`);
+  if(truthyFlag(hasPhoto)) badges.push(`<span class="badge good">${escapeHtml(dict.photoBadge)}</span>`);
+
+  const kv = [];
+  const imgs = imagesFullFor(r["_id"]);
+  if(imgs.length) kv.push(`<span>${escapeHtml(dict.photoCountLabel)}: ${imgs.length}</span>`);
+  if(pn) kv.push(`<span>${escapeHtml(dict.partNoLabel)}: ${escapeHtml(pn)}</span>`);
+  if(box !== null && box !== undefined && String(box).trim() !== "") kv.push(`<span>${escapeHtml(dict.boxLabel)}: ${escapeHtml(box)}</span>`);
+
+  // If damage field contains details (not just boolean), show it as a line
+  const damagedStr = (damaged === true || damaged === false) ? "" : normalizeStr(damaged);
+  const showDamageDetails = damagedStr && !["true","false","1","0","да","нет","есть"].includes(damagedStr.toLowerCase());
+
+  return `
+  <article class="card" data-id="${escapeHtml(r['_id'])}">
+    <div class="img" role="button" tabindex="0" data-gallery="${escapeHtml(r['_id'])}">
+      ${imgUrl ? `<img loading="lazy" src="${imgUrl}" alt="${name}">` : `<div>${escapeHtml(I18N[LANG].noPhoto)}</div>`}
+      ${badges.length ? `<div class="badges">${badges.join("")}</div>` : ""}
+    </div>
+    <div class="body">
+      <div class="hrow">
+        <a class="name" href="${withLangPrefix(`/part/${encodeURIComponent(String(r['_id']))}`)}">${escapeHtml(name)}</a>
+        <div class="num">#${escapeHtml(num)}</div>
+      </div>
+      <div class="meta">
+        ${sec ? `<div><b>${escapeHtml(dict.sectionLabel)}:</b> ${escapeHtml(sec)}</div>` : ""}
+        ${cat ? `<div><b>${escapeHtml(dict.categoryLabel)}:</b> ${escapeHtml(cat)}</div>` : ""}
+        ${catName ? `<div><b>${escapeHtml(dict.catalogLabel)}:</b> ${escapeHtml(catName)}</div>` : ""}
+      </div>
+      ${desc ? `<div class="desc">${escapeHtml(desc)}</div>` : ""}
+      ${showDamageDetails ? `<div class="desc warnline"><b>${escapeHtml(dict.damageLabel)}:</b> ${escapeHtml(damagedStr)}</div>` : ""}
+      ${kv.length ? `<div class="kv">${kv.join("")}</div>` : ""}
+    </div>
+  </article>
+  `;
+}
+
+function escapeHtml(s){
+  return (s ?? "").toString()
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+async function render(records){
+  $("stats").textContent = I18N[LANG].found(records.length, DATA.length);
+  const cards = $("cards");
+  cards.innerHTML = "";
+  for(const r of records){
+    const id = r["_id"];
+    const imgUrl = coverImageFor(id);
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = cardHtml(r, imgUrl);
+    const el = wrapper.firstElementChild;
+    cards.appendChild(el);
+  }
+}
+
+function currentFiltered(){
+  const q = normalizeStr($("q").value);
+  const section = normalizeStr($("section").value);
+  const onlyWithPhoto = $("onlyWithPhoto").checked;
+  const sortMode = normalizeStr($("sort")?.value || "num_asc");
+
+  let base = DATA;
+
+  if(section){
+    base = base.filter(r => normalizeStr(getField(r, "Раздел")) === section);
+  }
+  if(onlyWithPhoto){
+    base = base.filter(r => truthyFlag(r["Есть фото"]));
+  }
+
+  // sorting helper
+  const numVal = (r)=>{
+    const s = String(r["Номер"] ?? r["_id"] ?? "").trim();
+    const n = parseInt(s, 10);
+    return Number.isFinite(n) ? n : 1e15;
+  };
+  const secVal = (r)=>normalizeStr(getField(r, "Раздел"));
+  const applySort = (arr)=>{
+    const out = arr.slice();
+    if(sortMode === "sec_asc"){
+      out.sort((a,b)=>{
+        const sa = secVal(a); const sb = secVal(b);
+        const c = sa.localeCompare(sb, LANG === "hy" ? "hy" : "ru");
+        if(c !== 0) return c;
+        return numVal(a) - numVal(b);
+      });
+    }else if(sortMode === "sec_desc"){
+      out.sort((a,b)=>{
+        const sa = secVal(a); const sb = secVal(b);
+        const c = sb.localeCompare(sa, LANG === "hy" ? "hy" : "ru");
+        if(c !== 0) return c;
+        return numVal(a) - numVal(b);
+      });
+    }else{
+      out.sort((a,b)=> numVal(a) - numVal(b));
+    }
+    return out;
+  };
+
+  if(!q) return applySort(base);
+
+  // Special: if user types only digits, prioritize by "Номер" exact match
+  const isDigits = /^[0-9]+$/.test(q);
+  if(isDigits){
+    const exact = base.filter(r => String(r["Номер"] ?? "") === q);
+    if(exact.length) return applySort(exact);
+  }
+
+  if(!fuse){
+    return applySort(base.filter(r => (r["_search"] ?? "").toLowerCase().includes(q.toLowerCase())));
+  }
+  const res = fuse.search(q, { limit: 200 });
+  const set = new Set(res.map(x=>x.item._id));
+  return applySort(base.filter(r => set.has(r._id)));
+}
+
+
+function routePath(){
+  const p = window.location.pathname;
+  const m = p.match(/^\/(?:ru|hy)?\/?part\/([^\/?#]+)/);
+  if(m){
+    return { mode:"part", id: decodeURIComponent(m[1]) };
+  }
+  return { mode:"list" };
+}
+
+function findById(id){
+  const sid = String(id);
+  return DATA.find(r => String(r["_id"]) === sid || String(r["Номер"] ?? "") === sid);
+}
+
+function renderDetail(rec){
+  const cards = $("cards");
+  cards.innerHTML = "";
+  const imgUrl = coverImageFor(rec["_id"]);
+  const wrap = document.createElement("div");
+  wrap.innerHTML = cardHtml(rec, imgUrl);
+  cards.appendChild(wrap.firstElementChild);
+  $("stats").textContent = I18N[LANG].position(rec["Номер"] ?? rec["_id"]);
+}
+
+function interceptLinks(){
+  document.addEventListener("click", (e)=>{
+    const a = e.target?.closest?.("a");
+    if(!a) return;
+    const href = a.getAttribute("href") || "";
+    if(href.startsWith("/part/") || href.startsWith("/hy/part/") || href.startsWith("/ru/part/")){
+      e.preventDefault();
+      history.pushState({}, "", href);
+      handleRoute();
+    }
+  });
+  window.addEventListener("popstate", ()=>handleRoute());
+}
+
+async function openGalleryFor(id){
+  const full = imagesFullFor(id);
+  if(!full.length) return;
+
+  const dlg = $("galleryDlg");
+  const rec = findById(id);
+  $("gTitle").textContent = rec ? (getField(rec, "Название") ?? `#${id}`) : `#${id}`;
+  $("gSub").textContent = rec ? (getField(rec, "Каталожное название") ?? getField(rec, "Раздел") ?? "") : "";
+
+  const thumbs = imagesThumbFor(id);
+  const gMain = $("gMain");
+  const gThumbs = $("gThumbs");
+  gThumbs.innerHTML = "";
+
+  const setMain = (url)=>{ gMain.src = url; };
+  setMain(full[0]);
+
+  const tlist = (thumbs.length === full.length) ? thumbs : full;
+  tlist.forEach((tUrl, i)=>{
+    const img = document.createElement("img");
+    img.loading = "lazy";
+    img.src = tUrl;
+    img.alt = `thumb ${i+1}`;
+    img.addEventListener("click", ()=> setMain(full[i] ?? full[0]));
+    gThumbs.appendChild(img);
+  });
+
+  dlg.showModal();
+}
+
+function bindGallery(){
+  document.addEventListener("click", (e)=>{
+    const el = e.target?.closest?.("[data-gallery]");
+    if(!el) return;
+    const id = el.getAttribute("data-gallery");
+    if(id) openGalleryFor(id);
+  });
+  const dlg = $("galleryDlg");
+  $("gClose").addEventListener("click", ()=>dlg.close());
+}
+
+function handleRoute(){
+  const r = routePath();
+  if(r.mode === "part"){
+    const rec = findById(r.id);
+    if(rec){
+      renderDetail(rec);
+      // reset filters
+      $("section").value = "";
+      $("onlyWithPhoto").checked = false;
+      $("q").value = "";
+    }else{
+      $("stats").textContent = I18N[LANG].notFound;
+      $("cards").innerHTML = "";
+    }
+  }else{
+    render(currentFiltered());
+  }
+}
+
+
+async function main(){
+  LANG = langFromPath();
+  applyI18n();
+
+  const res = await fetch("data.json");
+  const loaded = await res.json();
+  // Support either array OR {items:[...]}
+  DATA = Array.isArray(loaded) ? loaded : (loaded.items || []);
+  BY_ID = {};
+  for(const r of DATA){
+    BY_ID[String(r._id)] = r;
+  }
+
+  buildSections(DATA);
+
+  fuse = new Fuse(DATA, {
+    keys: [
+      { name: "Номер", weight: 3 },
+      { name: "Номер запчасти", weight: 3 },
+      // RU
+      { name: "Название", weight: 2 },
+      { name: "Нормализованное название", weight: 2 },
+      { name: "Каталожное название", weight: 2 },
+      { name: "Детальная категория", weight: 1.5 },
+      { name: "Раздел", weight: 1.2 },
+      { name: "Описание", weight: 1.2 },
+      // HY (optional)
+      { name: "Название_hy", weight: 2 },
+      { name: "Нормализованное название_hy", weight: 2 },
+      { name: "Каталожное название_hy", weight: 2 },
+      { name: "Детальная категория_hy", weight: 1.5 },
+      { name: "Раздел_hy", weight: 1.2 },
+      { name: "Описание_hy", weight: 1.2 },
+      { name: "_search", weight: 0.5 },
+    ],
+    includeScore: true,
+    threshold: 0.35,
+    ignoreLocation: true,
+    minMatchCharLength: 2,
+  });
+
+  await loadPhotosIndex();
+
+  const rerender = () => handleRoute();
+  $("q").addEventListener("input", rerender);
+  $("section").addEventListener("change", rerender);
+  const sortEl = $("sort");
+  if(sortEl) sortEl.addEventListener("change", rerender);
+  $("onlyWithPhoto").addEventListener("change", rerender);
+  $("clear").addEventListener("click", () => { $("q").value=""; $("section").value=""; if(sortEl) sortEl.value="num_asc"; $("onlyWithPhoto").checked=false; rerender(); });
+
+  interceptLinks();
+  bindGallery();
+
+  // How-to dialog
+  const dlg = $("howDlg");
+  $("how").addEventListener("click", (e)=>{ e.preventDefault(); dlg.showModal(); });
+  $("closeHow").addEventListener("click", ()=>dlg.close());
+
+  // Language toggle (reloads with correct prefix)
+  const lt = $("langToggle");
+  if(lt){
+    lt.addEventListener("click", (e)=>{
+      e.preventDefault();
+      switchLanguage();
+    });
+  }
+
+  handleRoute();
+}
+
+main().catch(err => {
+  console.error(err);
+  $("stats").textContent = I18N[LANG].loadError;
+});
