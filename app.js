@@ -151,8 +151,10 @@ function setLang(next){
   }catch(e){}
 }
 
+// Use hash-based routes so deep links work on GitHub Pages (static hosting).
+// Example: https://.../toyo-parts/#/part/258
 function partHref(id){
-  return url(`part/${encodeURIComponent(String(id))}`);
+  return `#/part/${encodeURIComponent(String(id))}`;
 }
 
 function switchLanguage(){
@@ -779,8 +781,8 @@ function currentFiltered(){
 
 
 function routePath(){
-  const p = window.location.pathname;
-  const m = p.match(/\/part\/([^\/?#]+)/);
+  const h = window.location.hash || "#/";
+  const m = h.match(/^#\/part\/([^\/?#]+)/);
   if(m){
     return { mode:"part", id: decodeURIComponent(m[1]) };
   }
@@ -818,7 +820,7 @@ function renderDetail(rec){
         if(window.history.length > 1){
           window.history.back();
         }else{
-          window.location.href = url("");
+          window.location.hash = "#/";
         }
       });
     }
@@ -828,27 +830,9 @@ function renderDetail(rec){
 }
 
 function interceptLinks(){
-  document.addEventListener("click", (e)=>{
-    const a = e.target?.closest?.("a");
-    if(!a) return;
-    const href = a.getAttribute("href") || "";
-    // Home button should return to list view without full reload
-    if(a.classList.contains('homebtn') || a.id === 'homeBtn'){
-      if(href.startsWith('http')) return;
-      e.preventDefault();
-      const u = new URL(window.location.href);
-      u.pathname = ROOT;
-      history.pushState({}, "", u.toString());
-      handleRoute();
-      return;
-    }
-    if(href.includes("/part/") || href.startsWith("part/")){
-      e.preventDefault();
-      history.pushState({}, "", href);
-      handleRoute();
-    }
-  });
-  window.addEventListener("popstate", ()=>handleRoute());
+  // With hash routes, the browser can navigate without server support.
+  // We only need to re-render on hash changes.
+  window.addEventListener("hashchange", ()=>handleRoute());
 }
 
 async function openGalleryFor(id){
