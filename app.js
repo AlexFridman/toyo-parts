@@ -368,6 +368,47 @@ const kv = [];
   const cls = opts.detail ? "card detail" : "card";
   const mainThumb = (opts.detail && thumbs && thumbs.length) ? thumbs[0] : imgUrl;
   const mainFull = (opts.detail && fulls && fulls.length) ? fulls[0] : (imagesFullFor(r["_id"])[0] || "");
+    if(opts.detail){
+    const mainThumb = (thumbs && thumbs.length) ? thumbs[0] : imgUrl;
+    const mainFull = (fulls && fulls.length) ? fulls[0] : (imagesFullFor(r["_id"])[0] || "");
+    const thumbsHtml = (thumbs && thumbs.length) ? thumbs.map((t,i)=>(
+      `<div class="thumb" data-i="${i}"><img src="${t}" alt="thumb ${i+1}" loading="lazy"></div>`
+    )).join("") : "";
+    return `
+  <article class="card detail detail-page" data-id="${escapeHtml(r['_id'])}">
+    <div class="detail-wrap">
+      <div class="detail-left">
+        <div class="photo-row">
+          <div class="main-photo-wrap">
+            ${imgUrl ? `<img class="detail-main" id="detailMain" src="${escapeHtml(mainThumb)}" data-full="${escapeHtml(mainFull)}" alt="${escapeHtml(name)}" loading="eager">`
+                     : `<div class="nop">${escapeHtml(I18N[LANG].noPhoto)}</div>`}
+            ${badges.length ? `<div class="badges">${badges.join("")}</div>` : ""}
+          </div>
+          <div class="zoom-view" aria-hidden="true">
+            ${imgUrl ? `<img id="zoomImg" src="${escapeHtml(mainFull || mainThumb)}" alt="">` : ``}
+          </div>
+        </div>
+        ${thumbsHtml ? `<div class="thumbs-row">${thumbsHtml}</div>` : ``}
+      </div>
+      <div class="body">
+        <div class="hrow">
+          <a class="name" href="${partHref(r['_id'])}">${escapeHtml(name)}</a>
+          <div class="num">#${escapeHtml(num)}</div>
+        </div>
+        <div class="meta">
+          ${sec ? `<div><b>${escapeHtml(dict.sectionLabel)}:</b> ${escapeHtml(sec)}</div>` : ""}
+          ${cat ? `<div><b>${escapeHtml(dict.categoryLabel)}:</b> ${escapeHtml(cat)}</div>` : ""}
+          ${catName ? `<div><b>${escapeHtml(dict.catalogLabel)}:</b> ${escapeHtml(catName)}</div>` : ""}
+        </div>
+        ${desc ? `<div class="desc">${escapeHtml(desc)}</div>` : ""}
+        ${showDamageDetails ? `<div class="desc warnline"><b>${escapeHtml(dict.damageLabel)}:</b> ${escapeHtml(damagedStr)}</div>` : ""}
+        ${kv.length ? `<div class="kv">${kv.join("")}</div>` : ""}
+      </div>
+    </div>
+  </article>
+  `;
+  }
+
   return `
   <article class="${cls}" data-id="${escapeHtml(r['_id'])}">
     <div class="img ${opts.detail ? 'zoom-wrap' : ''}">
@@ -519,135 +560,114 @@ function bindDetailThumbs(id){
   try{
     const card = document.querySelector('.card.detail[data-id="'+CSS.escape(String(id))+'"]');
     if(!card) return;
-    const mainImg = card.querySelector('.img img');
-    const thumbsWrap = card.querySelector('.thumbs');
-    if(!mainImg) return;
+
+    const mainImg = card.querySelector('.main-photo-wrap img');
+    const thumbsWrap = card.querySelector('.thumbs-row');
+    if(!mainImg || !thumbsWrap) return;
 
     const thumbs = imagesThumbFor(id);
     const full = imagesFullFor(id);
     if(!thumbs.length && !full.length) return;
 
-    const buttons = thumbsWrap ? thumbsWrap.querySelectorAll('button.thumb') : [];
+    const items = Array.from(thumbsWrap.querySelectorAll('.thumb'));
+    if(!items.length) return;
 
-    const activate = (i)=>{
-      if(!buttons || !buttons.length) return;
-      buttons.forEach(b=>b.classList.remove('active'));
-      const btn = thumbsWrap.querySelector('button.thumb[data-idx="'+i+'"]');
-      if(btn) btn.classList.add('active');
+    const setActive = (i)=>{
+      items.forEach((el, idx)=> el.classList.toggle('is-active', idx===i));
+
+      const fullUrl = (full && full[i]) ? full[i] : (full && full[0]) ? full[0] : '';
+      const thumbUrl = (thumbs && thumbs[i]) ? thumbs[i] : fullUrl;
+
+      // show thumb fast
+      if(thumbUrl) mainImg.src = thumbUrl;
+
+      // set data-full so zoom pane tracks the true full image
+      if(fullUrl){
+        mainImg.dataset.full = fullUrl;
+        // swap to full when loaded
+        if(fullUrl !== thumbUrl){
+          const pre = new Image();
+          pre.onload = ()=> { mainImg.src = fullUrl; };
+          pre.src = fullUrl;
+        }
+      }
     };
 
-    const setMain = (i)=>{
-      const maxLen = Math.max(thumbs.length, full.length);
-      if(maxLen <= 0) return;
-      i = Math.max(0, Math.min(i, maxLen-1));
-
-      const t = thumbs[i] || thumbs[0] || null;
-      const f = full[i] || full[0] || null;
-      const shown = t || f;
-      if(shown) mainImg.src = shown;
-      mainImg.dataset.idx = String(i);
-      mainImg.dataset.full = f || "";
-
-      // Preload full and swap when ready (keeps thumb visible while loading)
-      if(f && shown && f !== shown){
-        const probe = new Image();
-        probe.decoding = 'async';
-        probe.onload = ()=>{
-          if(mainImg.dataset.idx === String(i)) mainImg.src = f;
-        };
-        probe.src = f;
-      }
-
-      // Preload the rest of full images in background (best effort)
-      if(full && full.length){
-        setTimeout(()=>{
-          full.forEach((u,j)=>{
-            if(!u || j===i) return;
-            const im = new Image();
-            im.decoding = 'async';
-            im.src = u;
-          });
-        }, 120);
-      }
-
-      activate(i);
-    };
-
-    if(buttons && buttons.length){
-      buttons.forEach(btn=>{
-        btn.addEventListener('click', (e)=>{
-          e.preventDefault();
-          e.stopPropagation();
-          const i = parseInt(btn.getAttribute('data-idx')||'0',10) || 0;
-          setMain(i);
-        });
+    items.forEach((el, i)=>{
+      el.addEventListener('click', (e)=>{
+        e.preventDefault();
+        setActive(i);
       });
-    }
+    });
 
-    setMain(0);
+    // initial
+    items[0].classList.add('is-active');
+    const firstFull = (full && full[0]) ? full[0] : '';
+    if(firstFull) mainImg.dataset.full = firstFull;
+
   }catch(e){
     // ignore
   }
 }
 
 function bindDetailZoom(id){
-  // Amazon-like hover zoom on desktop: show a zoom pane with magnified area.
+  // Amazon-like hover zoom on desktop: pan a magnified image in the right pane.
   try{
     const card = document.querySelector('.card.detail[data-id="'+CSS.escape(String(id))+'"]');
     if(!card) return;
-    const wrap = card.querySelector('.img.zoom-wrap');
-    const img = card.querySelector('img.detail-main');
-    const pane = card.querySelector('.zoom-pane');
-    if(!wrap || !img || !pane) return;
 
     // Only enable on devices that support hover & fine pointer.
     if(window.matchMedia && !window.matchMedia('(hover: hover) and (pointer: fine)').matches){
-      pane.style.display = 'none';
+      const zv = card.querySelector('.zoom-view');
+      if(zv) zv.style.display = 'none';
       return;
     }
 
-    let activeUrl = null;
+    const mainWrap = card.querySelector('.main-photo-wrap');
+    const mainImg = card.querySelector('.main-photo-wrap img');
+    const zoomWrap = card.querySelector('.zoom-view');
+    const zoomImg = card.querySelector('.zoom-view img');
 
-    const ensurePaneImage = (fullUrl)=>{
-      if(!fullUrl) return;
-      if(fullUrl === activeUrl) return;
-      activeUrl = fullUrl;
-      pane.style.backgroundImage = `url("${fullUrl}")`;
-      // preload image silently
-      const p = new Image();
-      p.decoding = 'async';
-      p.src = fullUrl;
-    };
+    if(!mainWrap || !mainImg || !zoomWrap || !zoomImg) return;
 
-    const onMove = (e)=>{
-      const rect = wrap.getBoundingClientRect();
-      const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-      const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
-      const px = (x / rect.width) * 100;
-      const py = (y / rect.height) * 100;
-      pane.style.backgroundPosition = `${px}% ${py}%`;
-    };
+    const ZOOM = 2.2;
+
+    function ensureZoomSrc(){
+      const fullUrl = mainImg.dataset.full || mainImg.getAttribute('data-full') || mainImg.src || '';
+      if(fullUrl && zoomImg.src !== fullUrl){
+        zoomImg.src = fullUrl;
+      }
+    }
+
+    function update(clientX, clientY){
+      const rect = mainWrap.getBoundingClientRect();
+      const x = Math.min(Math.max((clientX - rect.left) / rect.width, 0), 1);
+      const y = Math.min(Math.max((clientY - rect.top) / rect.height, 0), 1);
+      const tx = -(x * (ZOOM - 1)) * rect.width;
+      const ty = -(y * (ZOOM - 1)) * rect.height;
+      zoomImg.style.transform = `translate(${tx}px, ${ty}px) scale(${ZOOM})`;
+    }
 
     const onEnter = ()=>{
-      const fullUrl = img.dataset.full || img.getAttribute('data-full') || '';
-      if(fullUrl) ensurePaneImage(fullUrl);
-      pane.classList.add('on');
+      ensureZoomSrc();
+      zoomImg.style.transform = `scale(${ZOOM})`;
+      zoomWrap.classList.add('on');
     };
 
     const onLeave = ()=>{
-      pane.classList.remove('on');
+      zoomWrap.classList.remove('on');
+      zoomImg.style.transform = 'none';
     };
 
-    // Update zoom source when main image changes (thumb clicks update data-full)
-    const obs = new MutationObserver(()=>{
-      const fullUrl = img.dataset.full || img.getAttribute('data-full') || '';
-      if(fullUrl) ensurePaneImage(fullUrl);
-    });
-    obs.observe(img, { attributes: true, attributeFilter: ['src','data-full'] });
+    const onMove = (e)=> update(e.clientX, e.clientY);
 
-    wrap.addEventListener('mouseenter', onEnter);
-    wrap.addEventListener('mousemove', onMove);
-    wrap.addEventListener('mouseleave', onLeave);
+    // Keep zoom in sync when main changes (thumb click swaps src/data-full)
+    const obs = new MutationObserver(()=> ensureZoomSrc());
+    obs.observe(mainImg, { attributes: true, attributeFilter: ['src','data-full'] });
+
+    mainWrap.addEventListener('mouseenter', onEnter);
+    mainWrap.addEventListener('mousemove', onMove);
+    mainWrap.addEventListener('mouseleave', onLeave);
   }catch(e){
     // ignore
   }

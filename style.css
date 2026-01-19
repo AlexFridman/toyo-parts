@@ -419,3 +419,117 @@ a.name:hover{text-decoration:underline}
   .footer-contacts{gap:8px}
   .hrow .num{font-size:16px}
 }
+
+
+
+/* ===== Detail page layout: keep thumbs below photo row (no overlap) ===== */
+.detail-page .detail-wrap{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.detail-page .detail-left{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.detail-page .photo-row{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.detail-page .main-photo-wrap{
+  position: relative;
+  height: min(52vh, 420px);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #0b0f14;
+  border: 1px solid rgba(255,255,255,0.06);
+  min-width: 0;
+}
+
+.detail-page .main-photo-wrap img{
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.detail-page .zoom-view{
+  height: min(52vh, 420px);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #0b0f14;
+  border: 1px solid rgba(255,255,255,0.06);
+  min-width: 0;
+}
+
+.detail-page .zoom-view img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform-origin: 0 0;
+  will-change: transform;
+  display: block;
+}
+
+.detail-page .thumbs-row{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(10,14,20,0.65);
+}
+
+.detail-page .thumb{
+  width: 72px;
+  height: 72px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: #0b0f14;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.detail-page .thumb img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.detail-page .thumb.is-active{
+  outline: 2px solid rgba(255,255,255,0.55);
+  outline-offset: 2px;
+}
+
+/* Mobile: stack columns, keep thumbs right under main image */
+@media (max-width: 900px){
+  .detail-page .detail-wrap{
+    grid-template-columns: 1fr;
+  }
+  .detail-page .photo-row{
+    grid-template-columns: 1fr;
+  }
+  .detail-page .main-photo-wrap,
+  .detail-page .zoom-view{
+    height: min(55vh, 380px);
+  }
+  .detail-page .zoom-view{
+    display: none; /* on mobile we hide zoom panel; pinch/OS zoom is enough */
+  }
+  .detail-page .thumb{
+    width: 64px;
+    height: 64px;
+  }
+}
