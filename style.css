@@ -160,6 +160,8 @@ a:hover{text-decoration:underline}
   padding:10px;
   align-items:stretch;
   justify-items:stretch;
+  position:relative;
+  z-index:1;
 }
 .card.detail img{object-fit:contain; background:#0b0c10}
 .zoom-pane{
@@ -352,9 +354,13 @@ a.name:hover{text-decoration:underline}
 .thumbs{
   display:flex;
   gap:8px;
-  padding:10px 12px 0 12px;
+  padding:10px 12px;
   overflow-x:auto;
   -webkit-overflow-scrolling: touch;
+  border-top:1px solid var(--line);
+  background:#0f1117;
+  position:relative;
+  z-index:2;
 }
 .thumb{
   border:1px solid rgba(255,255,255,0.15);
