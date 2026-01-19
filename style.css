@@ -151,8 +151,10 @@ a:hover{text-decoration:underline}
 }
 @keyframes shimmer{to{transform:translateX(40%)}}
 
-/* Detail view (part page): show photo without cropping */
-.card.detail .img{height:min(520px, 70vh)}
+/* Detail view (part page): show photo without cropping.
+   Keep it shorter so the thumbnails strip is always visible on desktop.
+   Zoom-on-hover provides the extra detail. */
+.card.detail .img{height:min(420px, 52vh)}
 .card.detail .img.zoom-wrap{
   display:grid;
   grid-template-columns: 1fr 1fr;

@@ -370,7 +370,7 @@ const kv = [];
   const mainFull = (opts.detail && fulls && fulls.length) ? fulls[0] : (imagesFullFor(r["_id"])[0] || "");
   return `
   <article class="${cls}" data-id="${escapeHtml(r['_id'])}">
-    <div class="img ${opts.detail ? 'zoom-wrap' : ''}" role="button" tabindex="0" data-gallery="${escapeHtml(r['_id'])}">
+    <div class="img ${opts.detail ? 'zoom-wrap' : ''}">
       ${imgUrl ? `
         <img id="detailMain" class="pimg ${opts.detail ? 'detail-main' : 'is-thumb'}" loading="lazy" src="${BLANK_IMG}" data-src="${escapeHtml(mainThumb)}" data-full="${escapeHtml(mainFull)}" alt="${escapeHtml(name)}">
         ${opts.detail ? `<div id="zoomPane" class="zoom-pane" aria-hidden="true"></div>` : ``}
@@ -1044,7 +1044,6 @@ async function main(){
   });
 
   interceptLinks();
-  bindGallery();
 
   // Mobile header collapse
   const ft = $("filtersToggle");
