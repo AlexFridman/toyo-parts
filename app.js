@@ -19,7 +19,7 @@ const I18N = {
     howTitle: "Как добавить фото",
     close: "Закрыть",
     searchPlaceholder: "Поиск: номер / название / описание...",
-    brandTitle: "4Runner Разбор",
+    brandTitle: "4Runner 2003 4.7 Limited",
     brandSubtitle: "Поиск по номеру запчасти и по описанию",
     callBtn: "Позвонить +374 41 153113",
     waBtn: "WhatsApp",
@@ -60,7 +60,7 @@ const I18N = {
     howTitle: "Ինչպես ավելացնել լուսանկարներ",
     close: "Փակել",
     searchPlaceholder: "Փնտրում՝ համար / անվանում / նկարագրություն...",
-    brandTitle: "4Runner Քանդում",
+    brandTitle: "4Runner 2003 4.7 Limited",
     brandSubtitle: "Փնտրում՝ համարով ու նկարագրությամբ",
     callBtn: "Զանգել +374 41 153113",
     waBtn: "WhatsApp",
@@ -92,38 +92,60 @@ const I18N = {
 
 let LANG = "ru";
 
+// Compute site root so the app works on GitHub Pages subpaths like /toyo-parts/
+// and still fetches data.json correctly even when opened at /part/<id>.
+function siteRoot(){
+  const p = window.location.pathname || "/";
+  const i = p.indexOf("/part/");
+  if(i >= 0){
+    return p.slice(0, i) + "/";
+  }
+  const lastSlash = p.lastIndexOf("/");
+  if(lastSlash >= 0) return p.slice(0, lastSlash + 1);
+  return "/";
+}
+
+const ROOT = siteRoot();
+function url(rel){
+  return ROOT + String(rel || "").replace(/^\/+/, "");
+}
+
 const $ = (id) => document.getElementById(id);
 
 
-function langFromPath(){
-  const p = window.location.pathname;
-  const m = p.match(/^\/(ru|hy)(\/|$)/);
-  if(m) return m[1];
+function langFromStorageOrQuery(){
+  try{
+    const sp = new URLSearchParams(window.location.search || "");
+    const q = (sp.get("lang") || "").toLowerCase();
+    if(q === "ru" || q === "hy") return q;
+  }catch(e){}
+  try{
+    const s = (localStorage.getItem("lang") || "").toLowerCase();
+    if(s === "ru" || s === "hy") return s;
+  }catch(e){}
   return "ru";
 }
-function withLangPrefix(path){
-  // path like "/part/250" or "/"
-  if(!path.startsWith("/")) path = "/" + path;
-  if(LANG === "ru") return path; // default (no prefix) for RU
-  // ensure single slash
-  return `/${LANG}` + path;
+
+function setLang(next){
+  LANG = (next === "hy") ? "hy" : "ru";
+  try{ localStorage.setItem("lang", LANG); }catch(e){}
+  // keep routes in English; store lang as query param (no /hy prefix => no 404)
+  try{
+    const u = new URL(window.location.href);
+    u.searchParams.set("lang", LANG);
+    history.replaceState({}, "", u.toString());
+  }catch(e){}
 }
 
-function stripLangPrefix(pathname){
-  // removes leading /ru or /hy
-  return pathname.replace(/^\/(ru|hy)(?=\/|$)/, "");
+function partHref(id){
+  return url(`part/${encodeURIComponent(String(id))}`);
 }
 
 function switchLanguage(){
-  const base = stripLangPrefix(window.location.pathname) || "/";
-  const targetLang = (LANG === "ru") ? "hy" : "ru";
-  if(targetLang === "ru"){
-    window.location.href = base + window.location.search + window.location.hash;
-  }else{
-    // ensure leading slash
-    const p = base.startsWith("/") ? base : ("/" + base);
-    window.location.href = `/${targetLang}` + p + window.location.search + window.location.hash;
-  }
+  const next = (LANG === "ru") ? "hy" : "ru";
+  setLang(next);
+  applyI18n();
+  handleRoute();
 }
 function applyI18n(){
   const dict = I18N[LANG] || I18N.ru;
@@ -206,7 +228,7 @@ function normalizeStr(s){
 
 async function loadPhotosIndex(){
   try{
-    const res = await fetch("photos_index.json");
+    const res = await fetch(url("photos_index.json"));
     if(res.ok){
       PHOTOS = await res.json();
     }else{
@@ -261,7 +283,8 @@ function buildSections(records){
 }
 
 
-function cardHtml(r, imgUrl){
+function cardHtml(r, imgUrl, opts){
+  opts = opts || {};
   const dict = I18N[LANG] || I18N.ru;
 
   const num = r["Номер"] ?? "";
@@ -273,33 +296,32 @@ function cardHtml(r, imgUrl){
   const desc = getField(r, "Описание") ?? "";
   const damaged = getField(r, "Есть повреждения");
   const tuning = r["Тюнинг"];
-  const hasPhoto = r["Есть фото"];
-  const box = r["Коробка"];
+  const thumbs = (opts.detail) ? imagesThumbFor(r["_id"]) : [];
+  const fulls = (opts.detail) ? imagesFullFor(r["_id"]) : [];
 
   const badges = [];
   if(truthyFlag(damaged)) badges.push(`<span class="badge warn">${escapeHtml(dict.damageBadge)}</span>`);
   if(truthyFlag(tuning)) badges.push(`<span class="badge good">${escapeHtml(dict.tuningBadge)}</span>`);
-  if(truthyFlag(hasPhoto)) badges.push(`<span class="badge good">${escapeHtml(dict.photoBadge)}</span>`);
-
-  const kv = [];
+const kv = [];
   const imgs = imagesFullFor(r["_id"]);
   if(imgs.length) kv.push(`<span>${escapeHtml(dict.photoCountLabel)}: ${imgs.length}</span>`);
   if(pn) kv.push(`<span>${escapeHtml(dict.partNoLabel)}: ${escapeHtml(pn)}</span>`);
-  if(box !== null && box !== undefined && String(box).trim() !== "") kv.push(`<span>${escapeHtml(dict.boxLabel)}: ${escapeHtml(box)}</span>`);
 
   // If damage field contains details (not just boolean), show it as a line
   const damagedStr = (damaged === true || damaged === false) ? "" : normalizeStr(damaged);
   const showDamageDetails = damagedStr && !["true","false","1","0","да","нет","есть"].includes(damagedStr.toLowerCase());
 
+  const cls = opts.detail ? "card detail" : "card";
   return `
-  <article class="card" data-id="${escapeHtml(r['_id'])}">
+  <article class="${cls}" data-id="${escapeHtml(r['_id'])}">
     <div class="img" role="button" tabindex="0" data-gallery="${escapeHtml(r['_id'])}">
       ${imgUrl ? `<img loading="lazy" src="${imgUrl}" alt="${name}">` : `<div>${escapeHtml(I18N[LANG].noPhoto)}</div>`}
       ${badges.length ? `<div class="badges">${badges.join("")}</div>` : ""}
     </div>
+    ${opts.detail && (thumbs && thumbs.length) ? `<div class="thumbs">${thumbs.map((t,i)=>`<button class="thumb" type="button" data-idx="${i}" title="${i+1}"><img loading="lazy" src="${t}" alt="thumb ${i+1}"></button>`).join("")}</div>` : ""}
     <div class="body">
       <div class="hrow">
-        <a class="name" href="${withLangPrefix(`/part/${encodeURIComponent(String(r['_id']))}`)}">${escapeHtml(name)}</a>
+        <a class="name" href="${partHref(r['_id'])}">${escapeHtml(name)}</a>
         <div class="num">#${escapeHtml(num)}</div>
       </div>
       <div class="meta">
@@ -325,7 +347,8 @@ function escapeHtml(s){
 }
 
 async function render(records){
-  $("stats").textContent = I18N[LANG].found(records.length, DATA.length);
+  const st = $("stats");
+  if(st) { st.classList.remove("detail"); st.textContent = I18N[LANG].found(records.length, DATA.length); }
   const cards = $("cards");
   cards.innerHTML = "";
   for(const r of records){
@@ -336,6 +359,123 @@ async function render(records){
     const el = wrapper.firstElementChild;
     cards.appendChild(el);
   }
+
+  // Hover slideshow: on desktop, cycle through thumbnails while hovering the image.
+  bindHoverSlides();
+}
+
+
+function bindDetailThumbs(id){
+  try{
+    const card = document.querySelector('.card.detail[data-id="'+CSS.escape(String(id))+'"]');
+    if(!card) return;
+    const mainImg = card.querySelector('.img img');
+    const thumbsWrap = card.querySelector('.thumbs');
+    if(!mainImg) return;
+
+    const thumbs = imagesThumbFor(id);
+    const full = imagesFullFor(id);
+    if(!thumbs.length && !full.length) return;
+
+    const buttons = thumbsWrap ? thumbsWrap.querySelectorAll('button.thumb') : [];
+
+    const activate = (i)=>{
+      if(!buttons || !buttons.length) return;
+      buttons.forEach(b=>b.classList.remove('active'));
+      const btn = thumbsWrap.querySelector('button.thumb[data-idx="'+i+'"]');
+      if(btn) btn.classList.add('active');
+    };
+
+    const setMain = (i)=>{
+      const maxLen = Math.max(thumbs.length, full.length);
+      if(maxLen <= 0) return;
+      i = Math.max(0, Math.min(i, maxLen-1));
+
+      const t = thumbs[i] || thumbs[0] || null;
+      const f = full[i] || full[0] || null;
+      const shown = t || f;
+      if(shown) mainImg.src = shown;
+      mainImg.dataset.idx = String(i);
+
+      // Preload full and swap when ready (keeps thumb visible while loading)
+      if(f && shown && f !== shown){
+        const probe = new Image();
+        probe.decoding = 'async';
+        probe.onload = ()=>{
+          if(mainImg.dataset.idx === String(i)) mainImg.src = f;
+        };
+        probe.src = f;
+      }
+
+      // Preload the rest of full images in background (best effort)
+      if(full && full.length){
+        setTimeout(()=>{
+          full.forEach((u,j)=>{
+            if(!u || j===i) return;
+            const im = new Image();
+            im.decoding = 'async';
+            im.src = u;
+          });
+        }, 120);
+      }
+
+      activate(i);
+    };
+
+    if(buttons && buttons.length){
+      buttons.forEach(btn=>{
+        btn.addEventListener('click', (e)=>{
+          e.preventDefault();
+          e.stopPropagation();
+          const i = parseInt(btn.getAttribute('data-idx')||'0',10) || 0;
+          setMain(i);
+        });
+      });
+    }
+
+    setMain(0);
+  }catch(e){
+    // ignore
+  }
+}
+
+function bindHoverSlides(){
+  // Clean previous listeners by replacing nodes? We'll just attach once per render
+  document.querySelectorAll(".card:not(.detail) .img").forEach((box)=>{
+    const card = box.closest(".card");
+    const id = card?.getAttribute("data-id");
+    const img = box.querySelector("img");
+    if(!id || !img) return;
+
+    const thumbs = imagesThumbFor(id);
+    if(!thumbs || thumbs.length < 2) return;
+
+    // Avoid duplicate binding
+    if(box.dataset.hoverBound === "1") return;
+    box.dataset.hoverBound = "1";
+
+    let t = null;
+    let idx = 0;
+    const first = thumbs[0];
+
+    const stop = ()=>{
+      if(t){ clearInterval(t); t = null; }
+      idx = 0;
+      img.src = first;
+    };
+
+    const start = ()=>{
+      if(t) return;
+      t = setInterval(()=>{
+        idx = (idx + 1) % thumbs.length;
+        img.src = thumbs[idx];
+      }, 900);
+    };
+
+    box.addEventListener("mouseenter", start);
+    box.addEventListener("mouseleave", stop);
+    // Touch devices shouldn't auto-slide; mouseenter won't fire
+  });
 }
 
 function currentFiltered(){
@@ -350,7 +490,7 @@ function currentFiltered(){
     base = base.filter(r => normalizeStr(getField(r, "Раздел")) === section);
   }
   if(onlyWithPhoto){
-    base = base.filter(r => truthyFlag(r["Есть фото"]));
+    base = base.filter(r => imagesFullFor(r["_id"] || r._id || r["Номер"]).length > 0);
   }
 
   // sorting helper
@@ -360,25 +500,36 @@ function currentFiltered(){
     return Number.isFinite(n) ? n : 1e15;
   };
   const secVal = (r)=>normalizeStr(getField(r, "Раздел"));
+
+  const priVal = (r)=>{
+    const s = String(r["Приоритет"] ?? r["priority"] ?? "").trim();
+    if(!s) return 0;
+    const n = parseFloat(s.replace(',', '.'));
+    return Number.isFinite(n) ? n : 0;
+  };
+
   const applySort = (arr)=>{
     const out = arr.slice();
-    if(sortMode === "sec_asc"){
-      out.sort((a,b)=>{
+    out.sort((a,b)=>{
+      // Primary: priority desc (higher first)
+      const pa = priVal(a), pb = priVal(b);
+      if(pb !== pa) return pb - pa;
+
+      // Secondary: user-selected sorting
+      if(sortMode === "sec_asc"){
         const sa = secVal(a); const sb = secVal(b);
         const c = sa.localeCompare(sb, LANG === "hy" ? "hy" : "ru");
         if(c !== 0) return c;
         return numVal(a) - numVal(b);
-      });
-    }else if(sortMode === "sec_desc"){
-      out.sort((a,b)=>{
+      }else if(sortMode === "sec_desc"){
         const sa = secVal(a); const sb = secVal(b);
         const c = sb.localeCompare(sa, LANG === "hy" ? "hy" : "ru");
         if(c !== 0) return c;
         return numVal(a) - numVal(b);
-      });
-    }else{
-      out.sort((a,b)=> numVal(a) - numVal(b));
-    }
+      }else{
+        return numVal(a) - numVal(b);
+      }
+    });
     return out;
   };
 
@@ -402,7 +553,7 @@ function currentFiltered(){
 
 function routePath(){
   const p = window.location.pathname;
-  const m = p.match(/^\/(?:ru|hy)?\/?part\/([^\/?#]+)/);
+  const m = p.match(/\/part\/([^\/?#]+)/);
   if(m){
     return { mode:"part", id: decodeURIComponent(m[1]) };
   }
@@ -419,9 +570,11 @@ function renderDetail(rec){
   cards.innerHTML = "";
   const imgUrl = coverImageFor(rec["_id"]);
   const wrap = document.createElement("div");
-  wrap.innerHTML = cardHtml(rec, imgUrl);
+  wrap.innerHTML = cardHtml(rec, imgUrl, { detail: true });
   cards.appendChild(wrap.firstElementChild);
-  $("stats").textContent = I18N[LANG].position(rec["Номер"] ?? rec["_id"]);
+  const st = $("stats");
+  if(st) { st.classList.add("detail"); st.textContent = I18N[LANG].position(rec["Номер"] ?? rec["_id"]); }
+  bindDetailThumbs(rec["_id"]);
 }
 
 function interceptLinks(){
@@ -429,7 +582,7 @@ function interceptLinks(){
     const a = e.target?.closest?.("a");
     if(!a) return;
     const href = a.getAttribute("href") || "";
-    if(href.startsWith("/part/") || href.startsWith("/hy/part/") || href.startsWith("/ru/part/")){
+    if(href.includes("/part/") || href.startsWith("part/")){
       e.preventDefault();
       history.pushState({}, "", href);
       handleRoute();
@@ -452,8 +605,22 @@ async function openGalleryFor(id){
   const gThumbs = $("gThumbs");
   gThumbs.innerHTML = "";
 
-  const setMain = (url)=>{ gMain.src = url; };
-  setMain(full[0]);
+  const setMain = (thumbUrl, fullUrl)=>{
+    const shown = thumbUrl || fullUrl;
+    if(shown) gMain.src = shown;
+    gMain.dataset.full = fullUrl || "";
+    if(fullUrl && shown && fullUrl !== shown){
+      const im = new Image();
+      im.decoding = "async";
+      im.onload = ()=>{
+        if(gMain.dataset.full === fullUrl) gMain.src = fullUrl;
+      };
+      im.src = fullUrl;
+    }
+  };
+
+  const firstThumb = (thumbs && thumbs.length) ? thumbs[0] : null;
+  setMain(firstThumb, full[0]);
 
   const tlist = (thumbs.length === full.length) ? thumbs : full;
   tlist.forEach((tUrl, i)=>{
@@ -461,7 +628,7 @@ async function openGalleryFor(id){
     img.loading = "lazy";
     img.src = tUrl;
     img.alt = `thumb ${i+1}`;
-    img.addEventListener("click", ()=> setMain(full[i] ?? full[0]));
+    img.addEventListener("click", ()=> setMain(tUrl, (full[i] ?? full[0])));
     gThumbs.appendChild(img);
   });
 
@@ -500,10 +667,10 @@ function handleRoute(){
 
 
 async function main(){
-  LANG = langFromPath();
+  setLang(langFromStorageOrQuery());
   applyI18n();
 
-  const res = await fetch("data.json");
+  const res = await fetch(url("data.json"));
   const loaded = await res.json();
   // Support either array OR {items:[...]}
   DATA = Array.isArray(loaded) ? loaded : (loaded.items || []);
@@ -553,10 +720,6 @@ async function main(){
   interceptLinks();
   bindGallery();
 
-  // How-to dialog
-  const dlg = $("howDlg");
-  $("how").addEventListener("click", (e)=>{ e.preventDefault(); dlg.showModal(); });
-  $("closeHow").addEventListener("click", ()=>dlg.close());
 
   // Language toggle (reloads with correct prefix)
   const lt = $("langToggle");

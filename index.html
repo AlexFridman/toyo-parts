@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>4Runner Разбор — каталог запчастей</title>
+  <title>4Runner 2003 4.7 Limited — каталог запчастей</title>
   <link rel="stylesheet" href="style.css" />
   <script defer src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
   <script defer src="app.js"></script>
@@ -28,7 +28,7 @@
       <button id="clear" type="button" data-i18n="clear">Очистить</button>
       <button id="langToggle" type="button" class="langbtn" aria-label="Switch language">Հայ / RU</button>
       <a class="callbtn" id="callBtn" href="tel:+37441153113" data-i18n="callBtn">Позвонить +374 41 153113</a>
-      <a class="wabtn" id="waBtn" href="https://wa.me/37533678686" target="_blank" rel="noopener" data-i18n="waBtn">WhatsApp</a>
+      <a class="wabtn" id="waBtn" href="https://wa.me/375336478686" target="_blank" rel="noopener" data-i18n="waBtn">WhatsApp</a>
       <a class="tgbtn" id="tgBtn" href="https://t.me/alexfridman" target="_blank" rel="noopener" data-i18n="tgBtn">Telegram</a>
     </div>
   </header>
@@ -39,29 +39,17 @@
   </main>
 
   <footer class="footer">
-    <div>
-      <span class="muted">GitHub Pages • статический сайт</span>
-      <span class="dot">•</span>
-      <a class="muted" href="#" id="how" data-i18n="howAddPhotos">как добавить фото</a>
+    <div class="footer-inner">
+      <div class="muted">4Runner 2003 4.7 Limited • статический каталог</div>
+      <div class="footer-contacts">
+        <a href="tel:+37441153113">+374 41 153113</a>
+        <span class="dot">•</span>
+        <a href="https://wa.me/375336478686" target="_blank" rel="noopener">WhatsApp +375 33 647 8686</a>
+        <span class="dot">•</span>
+        <a href="https://t.me/alexfridman" target="_blank" rel="noopener">Telegram @alexfridman</a>
+      </div>
     </div>
   </footer>
-
-  <dialog id="howDlg">
-    <h3 data-i18n="howTitle">Как добавить фото</h3>
-    <p>
-      В репозитории создайте папку <code>photos/</code> и внутри папки по номеру позиции, например:
-      <code>photos/250/</code>.
-      Положите туда изображения (<code>.jpg</code>, <code>.jpeg</code>, <code>.png</code>, <code>.webp</code>).
-      Сайт покажет первое фото из индекса и будет знать, сколько фото в папке.
-    </p>
-    <p class="muted">
-      Важно: GitHub Pages не умеет “листать” файлы папки на сервере.
-      Поэтому мы генерируем файл <code>photos_index.json</code> скриптом, который обходит папки с фото.
-    </p>
-    <div class="dlg-actions">
-      <button id="closeHow" type="button" data-i18n="close">Закрыть</button>
-    </div>
-  </dialog>
 
   <dialog id="galleryDlg">
     <div class="ghead">

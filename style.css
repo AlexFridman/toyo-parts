@@ -81,6 +81,10 @@ a:hover{text-decoration:underline}
   object-fit:cover;
   display:block;
 }
+
+/* Detail view (part page): show photo without cropping */
+.card.detail .img{height:min(520px, 70vh)}
+.card.detail img{object-fit:contain; background:#0b0c10}
 .badges{
   display:flex; gap:8px; flex-wrap:wrap;
   position:absolute; left:10px; bottom:10px;
@@ -203,4 +207,62 @@ a.name:hover{text-decoration:underline}
 @media (max-width: 380px){
   .controls select{min-width:120px}
   .card .img{height:170px}
+}
+
+/* Detail thumbnails strip */
+.thumbs{
+  display:flex;
+  gap:8px;
+  padding:10px 12px 0 12px;
+  overflow-x:auto;
+  -webkit-overflow-scrolling: touch;
+}
+.thumb{
+  border:1px solid rgba(255,255,255,0.15);
+  background:rgba(255,255,255,0.04);
+  border-radius:10px;
+  padding:2px;
+  cursor:pointer;
+  flex:0 0 auto;
+}
+.thumb img{
+  display:block;
+  width:72px;
+  height:54px;
+  object-fit:cover;
+  border-radius:8px;
+}
+.thumb.active{
+  border-color: rgba(255,255,255,0.6);
+}
+
+
+/* Emphasize internal part number */
+.hrow .num{
+  color: #e5e7eb;
+  font-size: 15px;
+  font-weight: 900;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.06);
+}
+.card.detail .hrow .num{font-size:18px; padding:6px 12px}
+
+.stats.detail{
+  font-size:16px;
+  font-weight:800;
+  color:#e5e7eb;
+}
+
+/* Footer contacts layout */
+.footer-inner{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap}
+.footer-contacts{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+.footer-contacts a{color:var(--text); text-decoration:none; border-bottom:1px solid rgba(125,211,252,.0)}
+.footer-contacts a:hover{color:var(--accent); text-decoration:none}
+
+@media (max-width: 640px){
+  .footer-inner{flex-direction:column; align-items:flex-start}
+  .footer-contacts{gap:8px}
+  .hrow .num{font-size:16px}
 }
