@@ -46,6 +46,7 @@ const I18N = {
     tuningBadge: "тюнинг",
     photoBadge: "есть фото",
     damageLabel: "Повреждения",
+    back: "Назад",
   },
   hy: {
     found: (n, total) => `Գտնվել է՝ ${n} / ${total}`,
@@ -87,6 +88,7 @@ const I18N = {
     tuningBadge: "թյունինգ",
     photoBadge: "կա ֆոտո",
     damageLabel: "Վնասվածքներ",
+    back: "Վերադառնալ",
   }
 };
 
@@ -157,6 +159,10 @@ function switchLanguage(){
   const next = (LANG === "ru") ? "hy" : "ru";
   setLang(next);
   applyI18n();
+  // Rebuild section options so their labels match the current language.
+  if(Array.isArray(DATA) && DATA.length){
+    buildSections(DATA);
+  }
   handleRoute();
 }
 function applyI18n(){
@@ -210,11 +216,26 @@ function applyI18n(){
   }
 
   // If in /hy prefix, adjust call button? keep RU number label.
+
+  // Refresh dynamic filter option labels (section list)
+  if(Array.isArray(DATA) && DATA.length){
+    buildSections(DATA);
+  }
 }
 
 function getField(r, base){
   // Uses *_hy when LANG=hy (if non-empty), otherwise falls back to RU.
   if(LANG === "hy"){
+    const hyKey = `${base}_hy`;
+    const v = r?.[hyKey];
+    if(v !== undefined && v !== null && String(v).trim() !== "") return v;
+  }
+  return r?.[base];
+}
+
+function getFieldForLang(r, base, lang){
+  // Same as getField but with explicit lang.
+  if(lang === "hy"){
     const hyKey = `${base}_hy`;
     const v = r?.[hyKey];
     if(v !== undefined && v !== null && String(v).trim() !== "") return v;
@@ -279,19 +300,38 @@ function coverImageFor(id){
 
 
 function buildSections(records){
-  const set = new Set();
-  for(const r of records){
-    const sec = getField(r, "Раздел");
-    if(sec) set.add(sec);
-  }
-  const sections = Array.from(set).sort((a,b)=>a.localeCompare(b,'ru'));
   const sel = $("section");
-  for(const s of sections){
+  if(!sel) return;
+
+  // Preserve current selection (value is RU key)
+  const cur = normalizeStr(sel.value);
+
+  // Clear all options except the first "all" option
+  while(sel.options.length > 1) sel.remove(1);
+
+  // Stable key = RU value. Label = localized (falls back to RU).
+  const map = new Map(); // ru -> label
+  for(const r of records){
+    const ru = normalizeStr(r?.["Раздел"]);
+    if(!ru) continue;
+    if(!map.has(ru)){
+      const label = normalizeStr(getFieldForLang(r, "Раздел", LANG)) || ru;
+      map.set(ru, label);
+    }
+  }
+  const items = Array.from(map.entries()).map(([ru,label])=>({ru,label}));
+  const loc = (LANG === "hy") ? "hy" : "ru";
+  items.sort((a,b)=>a.label.localeCompare(b.label, loc));
+
+  for(const it of items){
     const opt = document.createElement("option");
-    opt.value = s;
-    opt.textContent = s;
+    opt.value = it.ru;           // stable
+    opt.textContent = it.label;  // localized
     sel.appendChild(opt);
   }
+
+  // Restore previous selection if possible
+  if(cur) sel.value = cur;
 }
 
 
@@ -324,10 +364,15 @@ const kv = [];
   const showDamageDetails = damagedStr && !["true","false","1","0","да","нет","есть"].includes(damagedStr.toLowerCase());
 
   const cls = opts.detail ? "card detail" : "card";
+  const mainThumb = (opts.detail && thumbs && thumbs.length) ? thumbs[0] : imgUrl;
+  const mainFull = (opts.detail && fulls && fulls.length) ? fulls[0] : (imagesFullFor(r["_id"])[0] || "");
   return `
   <article class="${cls}" data-id="${escapeHtml(r['_id'])}">
-    <div class="img" role="button" tabindex="0" data-gallery="${escapeHtml(r['_id'])}">
-      ${imgUrl ? `<img class="pimg is-thumb" loading="lazy" src="${BLANK_IMG}" data-src="${imgUrl}" alt="${escapeHtml(name)}">` : `<div>${escapeHtml(I18N[LANG].noPhoto)}</div>`}
+    <div class="img ${opts.detail ? 'zoom-wrap' : ''}" role="button" tabindex="0" data-gallery="${escapeHtml(r['_id'])}">
+      ${imgUrl ? `
+        <img id="detailMain" class="pimg ${opts.detail ? 'detail-main' : 'is-thumb'}" loading="lazy" src="${BLANK_IMG}" data-src="${escapeHtml(mainThumb)}" data-full="${escapeHtml(mainFull)}" alt="${escapeHtml(name)}">
+        ${opts.detail ? `<div id="zoomPane" class="zoom-pane" aria-hidden="true"></div>` : ``}
+      ` : `<div>${escapeHtml(I18N[LANG].noPhoto)}</div>`}
       ${badges.length ? `<div class="badges">${badges.join("")}</div>` : ""}
     </div>
     ${opts.detail && (thumbs && thumbs.length) ? `<div class="thumbs">${thumbs.map((t,i)=>`<button class="thumb" type="button" data-idx="${i}" title="${i+1}"><img loading="lazy" src="${t}" alt="thumb ${i+1}"></button>`).join("")}</div>` : ""}
@@ -499,6 +544,7 @@ function bindDetailThumbs(id){
       const shown = t || f;
       if(shown) mainImg.src = shown;
       mainImg.dataset.idx = String(i);
+      mainImg.dataset.full = f || "";
 
       // Preload full and swap when ready (keeps thumb visible while loading)
       if(f && shown && f !== shown){
@@ -537,6 +583,69 @@ function bindDetailThumbs(id){
     }
 
     setMain(0);
+  }catch(e){
+    // ignore
+  }
+}
+
+function bindDetailZoom(id){
+  // Amazon-like hover zoom on desktop: show a zoom pane with magnified area.
+  try{
+    const card = document.querySelector('.card.detail[data-id="'+CSS.escape(String(id))+'"]');
+    if(!card) return;
+    const wrap = card.querySelector('.img.zoom-wrap');
+    const img = card.querySelector('img.detail-main');
+    const pane = card.querySelector('.zoom-pane');
+    if(!wrap || !img || !pane) return;
+
+    // Only enable on devices that support hover & fine pointer.
+    if(window.matchMedia && !window.matchMedia('(hover: hover) and (pointer: fine)').matches){
+      pane.style.display = 'none';
+      return;
+    }
+
+    let activeUrl = null;
+
+    const ensurePaneImage = (fullUrl)=>{
+      if(!fullUrl) return;
+      if(fullUrl === activeUrl) return;
+      activeUrl = fullUrl;
+      pane.style.backgroundImage = `url("${fullUrl}")`;
+      // preload image silently
+      const p = new Image();
+      p.decoding = 'async';
+      p.src = fullUrl;
+    };
+
+    const onMove = (e)=>{
+      const rect = wrap.getBoundingClientRect();
+      const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+      const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
+      const px = (x / rect.width) * 100;
+      const py = (y / rect.height) * 100;
+      pane.style.backgroundPosition = `${px}% ${py}%`;
+    };
+
+    const onEnter = ()=>{
+      const fullUrl = img.dataset.full || img.getAttribute('data-full') || '';
+      if(fullUrl) ensurePaneImage(fullUrl);
+      pane.classList.add('on');
+    };
+
+    const onLeave = ()=>{
+      pane.classList.remove('on');
+    };
+
+    // Update zoom source when main image changes (thumb clicks update data-full)
+    const obs = new MutationObserver(()=>{
+      const fullUrl = img.dataset.full || img.getAttribute('data-full') || '';
+      if(fullUrl) ensurePaneImage(fullUrl);
+    });
+    obs.observe(img, { attributes: true, attributeFilter: ['src','data-full'] });
+
+    wrap.addEventListener('mouseenter', onEnter);
+    wrap.addEventListener('mousemove', onMove);
+    wrap.addEventListener('mouseleave', onLeave);
   }catch(e){
     // ignore
   }
@@ -604,7 +713,8 @@ function currentFiltered(){
   let base = DATA;
 
   if(section){
-    base = base.filter(r => normalizeStr(getField(r, "Раздел")) === section);
+    // Filter key is stable RU section value (option.value stores RU)
+    base = base.filter(r => normalizeStr(r?.["Раздел"]) === section);
   }
   if(onlyWithPhoto){
     base = base.filter(r => imagesFullFor(r["_id"] || r._id || r["Номер"]).length > 0);
@@ -692,8 +802,29 @@ function renderDetail(rec){
   wrap.innerHTML = cardHtml(rec, imgUrl, { detail: true });
   cards.appendChild(wrap.firstElementChild);
   const st = $("stats");
-  if(st) { st.classList.add("detail"); st.textContent = I18N[LANG].position(rec["Номер"] ?? rec["_id"]); }
+  if(st) {
+    st.classList.add("detail");
+    const dict = I18N[LANG] || I18N.ru;
+    const pid = rec["Номер"] ?? rec["_id"];
+    st.innerHTML = `
+      <button id="backBtn" class="backbtn" type="button">← ${escapeHtml(dict.back)}</button>
+      <div class="detailpos">${escapeHtml(dict.position(pid))}</div>
+    `;
+    const bb = $("backBtn");
+    if(bb){
+      bb.addEventListener("click", (e)=>{
+        e.preventDefault();
+        // Prefer history back, but fall back to home.
+        if(window.history.length > 1){
+          window.history.back();
+        }else{
+          window.location.href = url("");
+        }
+      });
+    }
+  }
   bindDetailThumbs(rec["_id"]);
+  bindDetailZoom(rec["_id"]);
 }
 
 function interceptLinks(){
@@ -701,6 +832,16 @@ function interceptLinks(){
     const a = e.target?.closest?.("a");
     if(!a) return;
     const href = a.getAttribute("href") || "";
+    // Home button should return to list view without full reload
+    if(a.classList.contains('homebtn') || a.id === 'homeBtn'){
+      if(href.startsWith('http')) return;
+      e.preventDefault();
+      const u = new URL(window.location.href);
+      u.pathname = ROOT;
+      history.pushState({}, "", u.toString());
+      handleRoute();
+      return;
+    }
     if(href.includes("/part/") || href.startsWith("part/")){
       e.preventDefault();
       history.pushState({}, "", href);
