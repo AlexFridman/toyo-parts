@@ -19,17 +19,19 @@ body{
 a{color:var(--accent); text-decoration:none}
 a:hover{text-decoration:underline}
 .topbar{
-  position:sticky; top:0; z-index:10;
+  position:sticky; top:0; z-index:20;
   padding:14px 16px;
-  background:rgba(11,12,16,.85);
+  background:rgba(11,12,16,.90);
   backdrop-filter: blur(10px);
   border-bottom:1px solid var(--line);
-  display:flex; gap:14px; align-items:center; justify-content:space-between;
-  flex-wrap:wrap;
 }
+.toprow{
+  display:flex; gap:14px; align-items:flex-start; justify-content:space-between;
+}
+.top-actions{display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end}
 .brand .title{font-weight:800; font-size:18px; letter-spacing:.2px}
 .brand .subtitle{color:var(--muted); font-size:12px; margin-top:2px}
-.controls{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+.controls{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px}
 .controls input[type="search"]{
   width:min(520px, 75vw);
   padding:10px 12px;
@@ -81,6 +83,34 @@ a:hover{text-decoration:underline}
   object-fit:cover;
   display:block;
 }
+
+/* Progressive images (thumb -> full) */
+.pimg{transition: filter .25s ease, opacity .25s ease}
+.pimg.is-thumb{filter: blur(10px); transform: scale(1.03)}
+.pimg.is-full{filter:none; transform:none}
+
+/* Skeletons */
+.skeleton{
+  position:relative;
+  overflow:hidden;
+  border:1px solid var(--line);
+  background:linear-gradient(180deg, #12151d 0%, #0f1117 100%);
+  border-radius:16px;
+}
+.sk-img{height:160px; background:#0b0c10}
+.sk-body{padding:12px}
+.sk-line{height:10px; background:rgba(255,255,255,.07); border-radius:999px; margin-top:10px}
+.sk-line.w70{width:70%}
+.sk-line.w45{width:45%}
+.sk-line.w90{width:90%}
+.skeleton::after{
+  content:"";
+  position:absolute; inset:0;
+  transform:translateX(-40%);
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent);
+  animation: shimmer 1.2s infinite;
+}
+@keyframes shimmer{to{transform:translateX(40%)}}
 
 /* Detail view (part page): show photo without cropping */
 .card.detail .img{height:min(520px, 70vh)}
@@ -186,22 +216,65 @@ a.name:hover{text-decoration:underline}
   cursor:pointer;
   white-space:nowrap;
 }
+
 .langbtn:hover{border-color:rgba(134,239,172,1); background:rgba(134,239,172,.18);}
+
+.filtersbtn{
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(255,255,255,.06);
+  color:var(--text);
+  font-weight:900;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.filtersbtn:hover{border-color:#3a4a66}
+
+/* Mobile bottom actions */
+.mobile-actions{display:none}
+.mobile-actions .mact{
+  display:flex; align-items:center; justify-content:center;
+  width:44px; height:44px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(15,17,23,.92);
+  color:var(--text);
+  text-decoration:none;
+  font-size:18px;
+}
+.mobile-actions .mact.call{border-color:rgba(125,211,252,.6)}
+.mobile-actions .mact.wa{border-color:rgba(134,239,172,.55)}
+.mobile-actions .mact.tg{border-color:rgba(125,211,252,.55)}
 
 /* Mobile / small screens */
 @media (max-width: 640px){
-  .topbar{padding:12px 12px; gap:10px}
+  .topbar{padding:12px 12px}
+  .toprow{flex-direction:column; gap:10px}
   .brand{width:100%}
   .brand .title{font-size:18px}
-  .controls{width:100%; gap:8px}
+  .top-actions{width:100%; justify-content:space-between}
+  /* Make header compact: hide filters by default, keep call visible */
+  .controls{width:100%; gap:8px; display:none}
+  .topbar.open .controls{display:flex}
   .controls input[type="search"]{width:100%; min-width:0}
   .controls select{flex:1; min-width:140px}
-  .controls button, .callbtn, .langbtn, .wabtn, .tgbtn{padding:12px 12px}
+  .controls button{padding:12px 12px}
+  .callbtn, .langbtn, .wabtn, .tgbtn{padding:12px 12px}
   .chk{width:100%}
   .container{padding:14px 12px}
   .grid{grid-template-columns: 1fr; gap:10px}
   .card .img{height:190px}
   .gthumbs img{width:84px; height:64px}
+  dialog#galleryDlg{
+    width: calc(100vw - 24px);
+    max-width: none;
+    border-radius: 18px;
+  }
+  dialog#galleryDlg .gmain{max-height:55vh}
+  /* leave space for bottom action bar */
+  body{padding-bottom:74px}
+  .mobile-actions{display:flex}
 }
 
 @media (max-width: 380px){
@@ -258,6 +331,12 @@ a.name:hover{text-decoration:underline}
 /* Footer contacts layout */
 .footer-inner{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap}
 .footer-contacts{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+
+/* Gallery: fullscreen on mobile */
+@media (max-width: 640px){
+  dialog{width:100vw; height:100vh; max-width:none; border-radius:0; padding:12px}
+  .gmain{max-height:62vh}
+}
 .footer-contacts a{color:var(--text); text-decoration:none; border-bottom:1px solid rgba(125,211,252,.0)}
 .footer-contacts a:hover{color:var(--accent); text-decoration:none}
 

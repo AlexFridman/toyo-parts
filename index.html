@@ -10,11 +10,22 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">
-      <div class="title" id="brandTitle" data-i18n="brandTitle">4Runner Разбор</div>
-      <div class="subtitle" id="brandSubtitle" data-i18n="brandSubtitle">Поиск по номеру запчасти и по описанию</div>
+    <div class="toprow">
+      <div class="brand">
+        <div class="title" id="brandTitle" data-i18n="brandTitle">4Runner 2003 4.7 Limited</div>
+        <div class="subtitle" id="brandSubtitle" data-i18n="brandSubtitle">Поиск по номеру запчасти и по описанию</div>
+      </div>
+
+      <div class="top-actions">
+        <button id="filtersToggle" type="button" class="filtersbtn" aria-label="Toggle filters">☰</button>
+        <button id="langToggle" type="button" class="langbtn" aria-label="Switch language">Հայ / RU</button>
+        <a class="callbtn" id="callBtn" href="tel:+37441153113" data-i18n="callBtn">Позвонить +374 41 153113</a>
+        <a class="wabtn" id="waBtn" href="https://wa.me/375336478686" target="_blank" rel="noopener" data-i18n="waBtn">WhatsApp</a>
+        <a class="tgbtn" id="tgBtn" href="https://t.me/alexfridman" target="_blank" rel="noopener" data-i18n="tgBtn">Telegram</a>
+      </div>
     </div>
-    <div class="controls">
+
+    <div class="controls" id="filtersPanel">
       <input id="q" type="search" placeholder="Поиск: номер / название / описание..." data-i18n-placeholder="searchPlaceholder" autocomplete="off" />
       <select id="section">
         <option value="" data-i18n="allSections">Все разделы</option>
@@ -26,10 +37,6 @@
       </select>
       <label class="chk"><input id="onlyWithPhoto" type="checkbox" /> <span data-i18n="onlyWithPhoto">Только с фото</span></label>
       <button id="clear" type="button" data-i18n="clear">Очистить</button>
-      <button id="langToggle" type="button" class="langbtn" aria-label="Switch language">Հայ / RU</button>
-      <a class="callbtn" id="callBtn" href="tel:+37441153113" data-i18n="callBtn">Позвонить +374 41 153113</a>
-      <a class="wabtn" id="waBtn" href="https://wa.me/375336478686" target="_blank" rel="noopener" data-i18n="waBtn">WhatsApp</a>
-      <a class="tgbtn" id="tgBtn" href="https://t.me/alexfridman" target="_blank" rel="noopener" data-i18n="tgBtn">Telegram</a>
     </div>
   </header>
 
@@ -50,6 +57,13 @@
       </div>
     </div>
   </footer>
+
+  <!-- Mobile bottom actions -->
+  <div class="mobile-actions" id="mobileActions">
+    <a class="mact call" href="tel:+37441153113">📞</a>
+    <a class="mact wa" href="https://wa.me/375336478686" target="_blank" rel="noopener">💬</a>
+    <a class="mact tg" href="https://t.me/alexfridman" target="_blank" rel="noopener">✈️</a>
+  </div>
 
   <dialog id="galleryDlg">
     <div class="ghead">

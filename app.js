@@ -92,6 +92,18 @@ const I18N = {
 
 let LANG = "ru";
 
+// Lightweight placeholder (1x1 transparent gif) to support lazy image hydration.
+const BLANK_IMG = "data:image/gif;base64,R0lGODlhAQABAAAAACwAAAAAAQABAAA=";
+
+const UI_STATE_KEY = "toyo_parts_ui_state_v1";
+
+function loadUiState(){
+  try{ return JSON.parse(localStorage.getItem(UI_STATE_KEY) || "{}") || {}; }catch(e){ return {}; }
+}
+function saveUiState(state){
+  try{ localStorage.setItem(UI_STATE_KEY, JSON.stringify(state || {})); }catch(e){}
+}
+
 // Compute site root so the app works on GitHub Pages subpaths like /toyo-parts/
 // and still fetches data.json correctly even when opened at /part/<id>.
 function siteRoot(){
@@ -315,7 +327,7 @@ const kv = [];
   return `
   <article class="${cls}" data-id="${escapeHtml(r['_id'])}">
     <div class="img" role="button" tabindex="0" data-gallery="${escapeHtml(r['_id'])}">
-      ${imgUrl ? `<img loading="lazy" src="${imgUrl}" alt="${name}">` : `<div>${escapeHtml(I18N[LANG].noPhoto)}</div>`}
+      ${imgUrl ? `<img class="pimg is-thumb" loading="lazy" src="${BLANK_IMG}" data-src="${imgUrl}" alt="${escapeHtml(name)}">` : `<div>${escapeHtml(I18N[LANG].noPhoto)}</div>`}
       ${badges.length ? `<div class="badges">${badges.join("")}</div>` : ""}
     </div>
     ${opts.detail && (thumbs && thumbs.length) ? `<div class="thumbs">${thumbs.map((t,i)=>`<button class="thumb" type="button" data-idx="${i}" title="${i+1}"><img loading="lazy" src="${t}" alt="thumb ${i+1}"></button>`).join("")}</div>` : ""}
@@ -346,6 +358,56 @@ function escapeHtml(s){
     .replaceAll("'","&#039;");
 }
 
+function upsertMeta(selector, attrs){
+  let el = document.querySelector(selector);
+  if(!el){
+    el = document.createElement("meta");
+    if(attrs.name) el.setAttribute("name", attrs.name);
+    if(attrs.property) el.setAttribute("property", attrs.property);
+    document.head.appendChild(el);
+  }
+  if(attrs.content !== undefined) el.setAttribute("content", attrs.content);
+}
+
+function setPageMetaList(){
+  const dict = I18N[LANG] || I18N.ru;
+  const title = `${dict.brandTitle} — каталог запчастей`;
+  const desc = dict.brandSubtitle || "Каталог запчастей";
+  document.title = title;
+  upsertMeta('meta[name="description"]', { name: "description", content: desc });
+  upsertMeta('meta[property="og:title"]', { property: "og:title", content: title });
+  upsertMeta('meta[property="og:description"]', { property: "og:description", content: desc });
+  try{
+    const u = new URL(window.location.href);
+    u.searchParams.set("lang", LANG);
+    upsertMeta('meta[property="og:url"]', { property: "og:url", content: u.toString() });
+  }catch(e){}
+}
+
+function setPageMetaPart(rec){
+  const dict = I18N[LANG] || I18N.ru;
+  const id = rec?._id;
+  const num = rec?.["Номер"] ?? id;
+  const name = getField(rec, "Название") || "Запчасть";
+  const sec = getField(rec, "Раздел") || "";
+  const title = `#${num} — ${name}`;
+  const desc = [sec, getField(rec, "Каталожное название"), getField(rec, "Описание")].filter(Boolean).join(" · ").slice(0, 180);
+  document.title = title;
+  upsertMeta('meta[name="description"]', { name: "description", content: desc || dict.brandSubtitle });
+  upsertMeta('meta[property="og:title"]', { property: "og:title", content: title });
+  upsertMeta('meta[property="og:description"]', { property: "og:description", content: desc || dict.brandSubtitle });
+  const img = coverImageFor(id);
+  if(img){
+    const abs = (img.startsWith("http") ? img : (new URL(url(img), window.location.href)).toString());
+    upsertMeta('meta[property="og:image"]', { property: "og:image", content: abs });
+  }
+  try{
+    const u = new URL(window.location.href);
+    u.searchParams.set("lang", LANG);
+    upsertMeta('meta[property="og:url"]', { property: "og:url", content: u.toString() });
+  }catch(e){}
+}
+
 async function render(records){
   const st = $("stats");
   if(st) { st.classList.remove("detail"); st.textContent = I18N[LANG].found(records.length, DATA.length); }
@@ -362,6 +424,47 @@ async function render(records){
 
   // Hover slideshow: on desktop, cycle through thumbnails while hovering the image.
   bindHoverSlides();
+
+  // Hydrate lazy images (swap BLANK_IMG -> actual thumb) when they enter viewport.
+  setupLazyImages();
+}
+
+function renderSkeletons(count){
+  const cards = $("cards");
+  if(!cards) return;
+  cards.innerHTML = "";
+  const n = Math.max(6, Math.min(24, count || 12));
+  for(let i=0;i<n;i++){
+    const d = document.createElement("div");
+    d.className = "skeleton";
+    d.innerHTML = `<div class="sk-img"></div><div class="sk-body"><div class="sk-line w70"></div><div class="sk-line w45"></div><div class="sk-line w90"></div></div>`;
+    cards.appendChild(d);
+  }
+}
+
+let _imgObserver = null;
+function setupLazyImages(){
+  if(!_imgObserver){
+    _imgObserver = new IntersectionObserver((entries)=>{
+      for(const e of entries){
+        if(!e.isIntersecting) continue;
+        const img = e.target;
+        const src = img.getAttribute("data-src");
+        if(src && img.getAttribute("src") !== src){
+          img.src = src;
+          img.addEventListener("load", ()=>{
+            img.classList.remove("is-thumb");
+            img.classList.add("is-full");
+          }, { once: true });
+        }
+        _imgObserver.unobserve(img);
+      }
+    }, { rootMargin: "200px 0px" });
+  }
+  document.querySelectorAll('img[data-src]').forEach(img=>{
+    // Only hydrate images still on placeholder
+    if(img.getAttribute('src') === BLANK_IMG) _imgObserver.observe(img);
+  });
 }
 
 
@@ -447,8 +550,8 @@ function bindHoverSlides(){
     const img = box.querySelector("img");
     if(!id || !img) return;
 
-    const thumbs = imagesThumbFor(id);
-    if(!thumbs || thumbs.length < 2) return;
+    const thumbs = (imagesThumbFor(id) || []).filter(Boolean);
+    if(thumbs.length < 2) return;
 
     // Avoid duplicate binding
     if(box.dataset.hoverBound === "1") return;
@@ -461,14 +564,28 @@ function bindHoverSlides(){
     const stop = ()=>{
       if(t){ clearInterval(t); t = null; }
       idx = 0;
-      img.src = first;
+      // Ensure we never flash black/empty
+      img.src = first || img.getAttribute("data-src") || first;
     };
 
     const start = ()=>{
       if(t) return;
+      // Ensure the first image is shown immediately (prevents black flash on hover)
+      if(first){ img.src = first; }
+      // Preload next frame to reduce flicker
+      const preloadNext = (j)=>{
+        const u = thumbs[j];
+        if(!u) return;
+        const p = new Image();
+        p.decoding = "async";
+        p.src = u;
+      };
+      preloadNext(1);
       t = setInterval(()=>{
         idx = (idx + 1) % thumbs.length;
-        img.src = thumbs[idx];
+        const next = thumbs[idx];
+        if(next) img.src = next;
+        preloadNext((idx + 1) % thumbs.length);
       }, 900);
     };
 
@@ -560,6 +677,8 @@ function routePath(){
   return { mode:"list" };
 }
 
+let CURRENT_MODE = "list";
+
 function findById(id){
   const sid = String(id);
   return DATA.find(r => String(r["_id"]) === sid || String(r["Номер"] ?? "") === sid);
@@ -605,6 +724,7 @@ async function openGalleryFor(id){
   const gThumbs = $("gThumbs");
   gThumbs.innerHTML = "";
 
+  let cur = 0;
   const setMain = (thumbUrl, fullUrl)=>{
     const shown = thumbUrl || fullUrl;
     if(shown) gMain.src = shown;
@@ -619,8 +739,15 @@ async function openGalleryFor(id){
     }
   };
 
-  const firstThumb = (thumbs && thumbs.length) ? thumbs[0] : null;
-  setMain(firstThumb, full[0]);
+  const setIndex = (i)=>{
+    const max = full.length;
+    if(max <= 0) return;
+    cur = ((i % max) + max) % max;
+    const t = thumbs[cur] || thumbs[0] || null;
+    setMain(t, full[cur]);
+  };
+
+  setIndex(0);
 
   const tlist = (thumbs.length === full.length) ? thumbs : full;
   tlist.forEach((tUrl, i)=>{
@@ -628,9 +755,36 @@ async function openGalleryFor(id){
     img.loading = "lazy";
     img.src = tUrl;
     img.alt = `thumb ${i+1}`;
-    img.addEventListener("click", ()=> setMain(tUrl, (full[i] ?? full[0])));
+    img.addEventListener("click", ()=> setIndex(i));
     gThumbs.appendChild(img);
   });
+
+  // Swipe navigation on mobile
+  let x0 = null;
+  const onTouchStart = (e)=>{ x0 = e.touches && e.touches[0] ? e.touches[0].clientX : null; };
+  const onTouchEnd = (e)=>{
+    if(x0 === null) return;
+    const x1 = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : null;
+    if(x1 === null) return;
+    const dx = x1 - x0;
+    if(Math.abs(dx) > 35){
+      if(dx < 0) setIndex(cur + 1);
+      else setIndex(cur - 1);
+    }
+    x0 = null;
+  };
+  gMain.addEventListener('touchstart', onTouchStart, { passive: true });
+  gMain.addEventListener('touchend', onTouchEnd, { passive: true });
+  const onKey = (e)=>{
+    if(e.key === 'ArrowRight') setIndex(cur + 1);
+    if(e.key === 'ArrowLeft') setIndex(cur - 1);
+  };
+  window.addEventListener('keydown', onKey);
+  dlg.addEventListener('close', ()=>{
+    window.removeEventListener('keydown', onKey);
+    gMain.removeEventListener('touchstart', onTouchStart);
+    gMain.removeEventListener('touchend', onTouchEnd);
+  }, { once: true });
 
   dlg.showModal();
 }
@@ -649,19 +803,30 @@ function bindGallery(){
 function handleRoute(){
   const r = routePath();
   if(r.mode === "part"){
+    // Save scroll position when leaving list
+    if(CURRENT_MODE === "list"){
+      const st = loadUiState();
+      st.scrollY = window.scrollY || 0;
+      saveUiState(st);
+    }
+    CURRENT_MODE = "part";
     const rec = findById(r.id);
     if(rec){
       renderDetail(rec);
-      // reset filters
-      $("section").value = "";
-      $("onlyWithPhoto").checked = false;
-      $("q").value = "";
+      setPageMetaPart(rec);
     }else{
       $("stats").textContent = I18N[LANG].notFound;
       $("cards").innerHTML = "";
     }
   }else{
+    CURRENT_MODE = "list";
     render(currentFiltered());
+    setPageMetaList();
+    // Restore scroll position after render
+    const st = loadUiState();
+    if(st && typeof st.scrollY === "number" && st.scrollY > 0){
+      setTimeout(()=>{ window.scrollTo(0, st.scrollY); }, 0);
+    }
   }
 }
 
@@ -669,6 +834,9 @@ function handleRoute(){
 async function main(){
   setLang(langFromStorageOrQuery());
   applyI18n();
+
+  // Render skeletons immediately (better perceived performance)
+  renderSkeletons(12);
 
   const res = await fetch(url("data.json"));
   const loaded = await res.json();
@@ -709,16 +877,68 @@ async function main(){
 
   await loadPhotosIndex();
 
-  const rerender = () => handleRoute();
+  // Restore UI state (filters/search/sort) for list view
+  const st = loadUiState();
+  const qEl = $("q");
+  const secEl = $("section");
+  const sortEl = $("sort");
+  const photoEl = $("onlyWithPhoto");
+  if(qEl && typeof st.q === "string") qEl.value = st.q;
+  if(secEl && typeof st.section === "string") secEl.value = st.section;
+  if(sortEl && typeof st.sort === "string") sortEl.value = st.sort;
+  if(photoEl && typeof st.onlyWithPhoto === "boolean") photoEl.checked = st.onlyWithPhoto;
+
+  const saveStateFromInputs = () => {
+    try{
+      saveUiState({
+        q: normalizeStr($("q")?.value),
+        section: normalizeStr($("section")?.value),
+        sort: normalizeStr($("sort")?.value || "num_asc"),
+        onlyWithPhoto: !!$("onlyWithPhoto")?.checked,
+        // scrollY is saved when leaving list
+        scrollY: loadUiState().scrollY || 0,
+      });
+    }catch(e){}
+  };
+
+  const rerender = () => {
+    saveStateFromInputs();
+    handleRoute();
+  };
+
   $("q").addEventListener("input", rerender);
   $("section").addEventListener("change", rerender);
-  const sortEl = $("sort");
   if(sortEl) sortEl.addEventListener("change", rerender);
   $("onlyWithPhoto").addEventListener("change", rerender);
-  $("clear").addEventListener("click", () => { $("q").value=""; $("section").value=""; if(sortEl) sortEl.value="num_asc"; $("onlyWithPhoto").checked=false; rerender(); });
+  $("clear").addEventListener("click", () => {
+    $("q").value="";
+    $("section").value="";
+    if(sortEl) sortEl.value="num_asc";
+    $("onlyWithPhoto").checked=false;
+    rerender();
+  });
 
   interceptLinks();
   bindGallery();
+
+  // Mobile header collapse
+  const ft = $("filtersToggle");
+  const topbar = document.querySelector('.topbar');
+  if(ft && topbar){
+    ft.addEventListener('click', (e)=>{
+      e.preventDefault();
+      topbar.classList.toggle('open');
+    });
+  }
+
+  // Auto-open filters on larger screens
+  const syncHeaderMode = ()=>{
+    if(!topbar) return;
+    if(window.innerWidth > 640) topbar.classList.add('open');
+    else topbar.classList.remove('open');
+  };
+  window.addEventListener('resize', syncHeaderMode);
+  syncHeaderMode();
 
 
   // Language toggle (reloads with correct prefix)
