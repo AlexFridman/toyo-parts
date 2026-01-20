@@ -793,3 +793,65 @@ footer{ margin-top: auto; }
   flex: 1 1 auto;
 }
 body.sheet-open{ overflow: hidden; }
+
+/* Header contrast fixes */
+header{
+  background: var(--panel);
+  color: var(--text);
+}
+header *{ color: var(--text); }
+[data-theme="light"] header{
+  background: #ffffff;
+  border-bottom: 1px solid var(--border);
+}
+[data-theme="light"] header a,
+[data-theme="light"] header button,
+[data-theme="light"] header .btn{
+  color: var(--text) !important;
+}
+
+[data-theme="light"] #homeBtn{ color: var(--text) !important; }
+
+/* Footer safe area for mobile actions */
+@media (max-width: 900px){
+  footer{
+    padding-bottom: calc(14px + 74px + env(safe-area-inset-bottom));
+  }
+  #root{
+    padding-bottom: 10px;
+  }
+}
+
+/* Detail thumbs emphasis */
+.card.detail .thumbs-row{
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  margin-top: 6px;
+}
+.card.detail .thumb{
+  outline: none;
+}
+
+/* Mobile detail zoom */
+.detail-page .main-photo-wrap{ position: relative; overflow: hidden; border-radius: 16px; }
+.detail-page img.detail-main{ touch-action: none; user-select: none; -webkit-user-drag: none; }
+.detail-page .main-photo-wrap.zoomed img.detail-main{
+  cursor: grab;
+}
+.detail-page .zoom-hint{
+  position: absolute;
+  left: 10px; bottom: 10px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--panel) 80%, transparent);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+  opacity: 0.9;
+}
+@media (hover: hover) and (pointer: fine){
+  .detail-page .zoom-hint{ display:none; }
+}

@@ -892,6 +892,7 @@ function findById(id){
 }
 
 function renderDetail(rec){
+  try{ stopAllSlideshows(); }catch(e){}
   try{ startDetailSession(rec["_id"], rec); }catch(e){}
   // GA: view part
   try{
@@ -910,6 +911,7 @@ function renderDetail(rec){
   const wrap = document.createElement("div");
   wrap.innerHTML = cardHtml(rec, imgUrl, { detail: true });
   cards.appendChild(wrap.firstElementChild);
+  try{ initMobileDetailZoom(); }catch(e){}
   const st = $("stats");
   if(st) {
     st.classList.add("detail");
@@ -1409,6 +1411,8 @@ function updateMobileActionsLabels(){
 window.addEventListener("DOMContentLoaded", ()=>{ updateMobileActionsLabels(); });
 
 function initMobileCenterSlideshow(){
+  // Disabled on detail pages
+  if(String(location.hash||"").startsWith("#/part/")) return;
   // On touch devices: automatically slideshow the card closest to viewport center.
   const mq = window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)');
   if(!mq || !mq.matches) return;
@@ -1478,6 +1482,8 @@ function initMobileCenterSlideshow(){
 window.addEventListener("DOMContentLoaded", ()=>{ initMobileCenterSlideshow(); });
 
 function initDesktopHoverSlideshow(){
+  // Disabled on detail pages
+  if(String(location.hash||"").startsWith("#/part/")) return;
   const enabled = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   if(!enabled) return;
 
@@ -1656,3 +1662,140 @@ function initBottomSheet(){
   window.__closeSheet = closeSheet;
 }
 window.addEventListener("DOMContentLoaded", ()=>{ initBottomSheet(); });
+
+function initCardClickOpen(){
+  // On touch devices: tap anywhere on a card to open detail (except controls)
+  const mq = window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)');
+  if(!mq || !mq.matches) return;
+
+  document.addEventListener("click", (e)=>{
+    const card = e.target && e.target.closest ? e.target.closest(".card[data-id]") : null;
+    if(!card) return;
+
+    // ignore interactive elements
+    if(e.target.closest("a, button, input, select, textarea, label")) return;
+
+    const id = card.getAttribute("data-id");
+    if(!id) return;
+    haptic("light");
+    gaEvent("card_tap_open", { id: String(id) });
+    location.hash = "#/part/" + encodeURIComponent(id);
+  });
+}
+window.addEventListener("DOMContentLoaded", ()=>{ initCardClickOpen(); });
+
+function stopMobileSlideshowOnDetail(){
+  if(String(location.hash||"").startsWith("#/part/")){
+    if(window.__mobileSlideshowStop) window.__mobileSlideshowStop();
+  }
+}
+window.addEventListener("hashchange", stopMobileSlideshowOnDetail);
+
+function stopAllSlideshows(){
+  if(window.__stopDesktopSlideshow) window.__stopDesktopSlideshow();
+  if(window.__mobileSlideshowStop) window.__mobileSlideshowStop();
+}
+
+function initMobileDetailZoom(){
+  const mq = window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)');
+  if(!mq || !mq.matches) return;
+
+  const img = document.querySelector(".detail-page img.detail-main");
+  const wrap = document.querySelector(".detail-page .main-photo-wrap");
+  if(!img || !wrap) return;
+
+  // Add a small hint once per device
+  if(!wrap.querySelector(".zoom-hint")){
+    const h = document.createElement("div");
+    h.className = "zoom-hint";
+    h.textContent = (LANG === "hy") ? "Կրկնակի թափ՝ զում" : "Двойной тап — зум";
+    wrap.appendChild(h);
+    setTimeout(()=>{ try{ h.style.opacity = "0"; }catch(e){} }, 2500);
+    setTimeout(()=>{ try{ h.remove(); }catch(e){} }, 3300);
+  }
+
+  let zoomed = false;
+  let scale = 2.2;
+  let tx = 0, ty = 0;
+  let startX = 0, startY = 0;
+  let startTx = 0, startTy = 0;
+  let dragging = false;
+  let lastTap = 0;
+
+  function apply(){
+    img.style.transform = `translate(${tx}px, ${ty}px) scale(${zoomed ? scale : 1})`;
+    img.style.transformOrigin = "center center";
+  }
+
+  function clamp(){
+    // limit panning based on container size
+    const rW = wrap.clientWidth || 1;
+    const rH = wrap.clientHeight || 1;
+    const maxX = (rW * (scale - 1)) / 2;
+    const maxY = (rH * (scale - 1)) / 2;
+    tx = Math.max(-maxX, Math.min(maxX, tx));
+    ty = Math.max(-maxY, Math.min(maxY, ty));
+  }
+
+  function setZoom(on){
+    zoomed = on;
+    if(!zoomed){ tx = 0; ty = 0; dragging = false; }
+    wrap.classList.toggle("zoomed", zoomed);
+    apply();
+    gaEvent("mobile_zoom_toggle", { on: zoomed, part_id: String(location.hash||"").split("/").pop() || "" });
+  }
+
+  function onTap(e){
+    const now = Date.now();
+    const dt = now - lastTap;
+    lastTap = now;
+    if(dt < 280){
+      e.preventDefault();
+      haptic("light");
+      setZoom(!zoomed);
+    }
+  }
+
+  function onStart(e){
+    if(!zoomed) return;
+    dragging = true;
+    const t = e.touches ? e.touches[0] : e;
+    startX = t.clientX;
+    startY = t.clientY;
+    startTx = tx;
+    startTy = ty;
+    img.style.transition = "none";
+  }
+  function onMove(e){
+    if(!zoomed || !dragging) return;
+    const t = e.touches ? e.touches[0] : e;
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+    tx = startTx + dx;
+    ty = startTy + dy;
+    clamp();
+    apply();
+  }
+  function onEnd(e){
+    if(!zoomed) return;
+    dragging = false;
+    img.style.transition = "";
+    clamp(); apply();
+  }
+
+  img.addEventListener("touchend", onTap, { passive: false });
+  img.addEventListener("touchstart", onStart, { passive: true });
+  img.addEventListener("touchmove", onMove, { passive: true });
+  img.addEventListener("touchend", onEnd, { passive: true });
+  img.addEventListener("touchcancel", onEnd, { passive: true });
+
+  // Reset zoom when image changes (thumb click changes src) - observe attribute changes
+  const obs = new MutationObserver(()=>{ if(zoomed) setZoom(false); });
+  obs.observe(img, { attributes: true, attributeFilter: ["src"] });
+
+  // cleanup on route change
+  const onHash = ()=>{ try{ obs.disconnect(); }catch(e){} };
+  window.addEventListener("hashchange", onHash, { once: true });
+
+  apply();
+}
