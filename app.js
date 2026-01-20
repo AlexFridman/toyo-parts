@@ -1,3 +1,4 @@
+window.__DISABLE_IMG_HOVER_SLIDESHOW = true;
 
 
 async function initThemeFromConfig(){
@@ -15,7 +16,8 @@ async function initThemeFromConfig(){
 }
 
 function toggleTheme(){
-  const cur = document.documentElement.getAttribute("data-theme") || "dark";
+  haptic("light");
+const cur = document.documentElement.getAttribute("data-theme") || "dark";
   const next = (cur === "light") ? "dark" : "light";
   document.documentElement.setAttribute("data-theme", next);
   localStorage.setItem("theme", next);
@@ -225,7 +227,8 @@ function partHref(id){
 }
 
 function switchLanguage(){
-  try{ gaEvent("language_change", { from: LANG, to: (LANG === "ru") ? "hy" : "ru" }); }catch(e){}
+  haptic("light");
+try{ gaEvent("language_change", { from: LANG, to: (LANG === "ru") ? "hy" : "ru" }); }catch(e){}
 
   const next = (LANG === "ru") ? "hy" : "ru";
   setLang(next);
@@ -1473,3 +1476,183 @@ function initMobileCenterSlideshow(){
   setTimeout(pickCenter, 400);
 }
 window.addEventListener("DOMContentLoaded", ()=>{ initMobileCenterSlideshow(); });
+
+function initDesktopHoverSlideshow(){
+  const enabled = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  if(!enabled) return;
+
+  let activeId = null;
+  let timer = null;
+  let imgs = [];
+  let imgEl = null;
+  let i = 0;
+
+  function stop(){
+    if(timer){ clearInterval(timer); timer = null; }
+    activeId = null; imgs = []; imgEl = null; i = 0;
+  }
+
+  function start(card){
+    const id = card.getAttribute("data-id");
+    if(!id) return;
+    if(activeId === id) return;
+
+    stop();
+    activeId = id;
+    imgs = imagesThumbFor(id) || [];
+    if(!imgs.length) return;
+
+    imgEl = card.querySelector("img");
+    if(!imgEl) return;
+
+    i = 0;
+    // preload first 2 to avoid black
+    try{ const p1=new Image(); p1.src=imgs[0]; }catch(e){}
+    try{ const p2=new Image(); p2.src=imgs[1%imgs.length]; }catch(e){}
+
+    imgEl.src = imgs[0];
+
+    timer = setInterval(()=>{
+      i = (i + 1) % imgs.length;
+      imgEl.src = imgs[i];
+      try{ const p=new Image(); p.src=imgs[(i+1)%imgs.length]; }catch(e){}
+    }, 1200);
+  }
+
+  document.addEventListener("mouseover", (e)=>{
+    const card = e.target && e.target.closest ? e.target.closest(".card[data-id]") : null;
+    if(!card) return;
+    start(card);
+  });
+
+  document.addEventListener("mouseout", (e)=>{
+    // stop when leaving the card entirely
+    const from = e.target && e.target.closest ? e.target.closest(".card[data-id]") : null;
+    const to = e.relatedTarget && e.relatedTarget.closest ? e.relatedTarget.closest(".card[data-id]") : null;
+    if(from && from !== to){
+      stop();
+    }
+  });
+}
+window.addEventListener("DOMContentLoaded", ()=>{ initDesktopHoverSlideshow(); });
+
+function haptic(type="light"){
+  // Best-effort: vibration on supported browsers (Android). iOS Safari doesn't expose vibration.
+  try{
+    const map = { light: 10, medium: 20, heavy: 30 };
+    if(navigator.vibrate){
+      navigator.vibrate(map[type] || 10);
+    }
+  }catch(e){}
+}
+
+function initBottomSheet(){
+  const overlay = document.getElementById("sheetOverlay");
+  const sheet = document.getElementById("bottomSheet");
+  const closeBtn = document.getElementById("sheetClose");
+  const handle = document.getElementById("sheetHandle");
+  if(!overlay || !sheet || !closeBtn || !handle) return;
+
+  const mq = window.matchMedia && window.matchMedia('(max-width: 900px)');
+
+  function setLangTexts(){
+    const hy = (LANG === "hy");
+    const title = document.getElementById("sheetTitle");
+    const call = document.getElementById("sheetCall");
+    if(title) title.textContent = hy ? "Կոնտակտներ" : "Контакты";
+    if(call) call.querySelector(".sa-txt").textContent = hy ? "Զանգել" : "Позвонить";
+  }
+
+  function openSheet(){
+    setLangTexts();
+    overlay.classList.add("on");
+    sheet.classList.add("on");
+    overlay.setAttribute("aria-hidden","false");
+    sheet.setAttribute("aria-hidden","false");
+    document.body.classList.add("sheet-open");
+    haptic("light");
+    gaEvent("sheet_open", { from: String(location.hash||"") });
+  }
+
+  function closeSheet(reason="close"){
+    overlay.classList.remove("on");
+    sheet.classList.remove("on");
+    overlay.setAttribute("aria-hidden","true");
+    sheet.setAttribute("aria-hidden","true");
+    document.body.classList.remove("sheet-open");
+    haptic("light");
+    gaEvent("sheet_close", { reason });
+  }
+
+  overlay.addEventListener("click", ()=>closeSheet("overlay"));
+  closeBtn.addEventListener("click", ()=>closeSheet("x"));
+
+  // Drag to close
+  let startY = 0;
+  let dragging = false;
+
+  function onStart(ev){
+    dragging = true;
+    startY = (ev.touches ? ev.touches[0].clientY : ev.clientY);
+    sheet.style.transition = "none";
+  }
+  function onMove(ev){
+    if(!dragging) return;
+    const y = (ev.touches ? ev.touches[0].clientY : ev.clientY);
+    const dy = y - startY; // down positive
+    const next = 10 - dy;
+    sheet.style.bottom = next + "px";
+  }
+  function onEnd(){
+    if(!dragging) return;
+    dragging = false;
+    sheet.style.transition = "";
+    const curBottom = parseFloat(getComputedStyle(sheet).bottom || "10");
+    sheet.style.bottom = "";
+    if(curBottom < -120){
+      closeSheet("drag");
+    }else{
+      sheet.classList.add("on");
+    }
+  }
+
+  handle.addEventListener("touchstart", onStart, { passive: true });
+  handle.addEventListener("touchmove", onMove, { passive: true });
+  handle.addEventListener("touchend", onEnd);
+  handle.addEventListener("mousedown", onStart);
+  window.addEventListener("mousemove", onMove);
+  window.addEventListener("mouseup", onEnd);
+
+  // Wire mobile bar buttons to open sheet instead of navigating
+  const mCall = document.getElementById("mCall");
+  const mWa = document.getElementById("mWa");
+  const mTg = document.getElementById("mTg");
+  [mCall,mWa,mTg].forEach(btn=>{
+    if(!btn) return;
+    btn.addEventListener("click", (e)=>{
+      if(mq && mq.matches){
+        e.preventDefault();
+        openSheet();
+      }
+    });
+  });
+
+  // Track action clicks inside sheet + haptic
+  const partId = ()=> (String(location.hash||"").startsWith("#/part/") ? String(location.hash).split("/").pop() : "");
+  const sCall = document.getElementById("sheetCall");
+  const sWa = document.getElementById("sheetWa");
+  const sTg = document.getElementById("sheetTg");
+  if(sCall) sCall.addEventListener("click", ()=>{ haptic("medium"); gaEvent("sheet_action", { action:"call", part_id: partId() }); });
+  if(sWa) sWa.addEventListener("click", ()=>{ haptic("medium"); gaEvent("sheet_action", { action:"whatsapp", part_id: partId() }); });
+  if(sTg) sTg.addEventListener("click", ()=>{ haptic("medium"); gaEvent("sheet_action", { action:"telegram", part_id: partId() }); });
+
+  window.addEventListener("hashchange", ()=>{
+    if(sheet.classList.contains("on")){
+      closeSheet("nav");
+    }
+  });
+
+  window.__openSheet = openSheet;
+  window.__closeSheet = closeSheet;
+}
+window.addEventListener("DOMContentLoaded", ()=>{ initBottomSheet(); });

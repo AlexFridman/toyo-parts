@@ -14,7 +14,7 @@
       <a class="homebtn" id="homeBtn" href="#/" aria-label="Home"><span class="home-title">4Runner 2003 4.7 Limited</span></a>
 <button id="themeBtn" class="btn" type="button" aria-label="Theme">🌓</button>
       <div class="brand">
-        <div class="subtitle" id="brandSubtitle" data-i18n="brandSubtitle">Поиск по номеру запчасти и по описанию</div>
+        <div class="subtitle" id="brandSubtitle" data-i18n="brandSubtitle"></div>
       </div>
 
       <div class="top-actions">
@@ -81,8 +81,23 @@
 
 <div class="mobile-actions" id="mobileActions">
   <a id="mCall" href="tel:+37441153113">📞 Զանգել</a>
-  <a id="mWa" href="https://wa.me/375336478686" target="_blank" rel="noopener">💬 WhatsApp</a>
-  <a id="mTg" href="https://t.me/alexfridman" target="_blank" rel="noopener">✈️ Telegram</a>
+  <a id="mWa" href="https://wa.me/375336478686" target="_blank" rel="noopener"><span class="icon-wa"></span> WhatsApp</a>
+  <a id="mTg" href="https://t.me/alexfridman" target="_blank" rel="noopener"><span class="icon-tg"></span> Telegram</a>
 </div>
+
+<div id="sheetOverlay" class="sheet-overlay" aria-hidden="true"></div>
+<div id="bottomSheet" class="bottom-sheet" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="sheet-handle" id="sheetHandle" aria-label="Drag handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title" id="sheetTitle">Контакты</div>
+    <button class="sheet-close" id="sheetClose" type="button" aria-label="Close">✕</button>
+  </div>
+  <div class="sheet-body">
+    <a class="sheet-action" id="sheetCall" href="tel:+37441153113"><span class="sa-ico">📞</span><span class="sa-txt">Позвонить</span></a>
+    <a class="sheet-action" id="sheetWa" href="https://wa.me/375336478686" target="_blank" rel="noopener"><span class="sa-ico"><span class="icon-wa"></span></span><span class="sa-txt">WhatsApp</span></a>
+    <a class="sheet-action" id="sheetTg" href="https://t.me/alexfridman" target="_blank" rel="noopener"><span class="sa-ico"><span class="icon-tg"></span></span><span class="sa-txt">Telegram</span></a>
+  </div>
+</div>
+
 </body>
 </html>
