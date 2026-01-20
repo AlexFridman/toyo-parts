@@ -7,5 +7,12 @@
   "paths": {
     "photos_prefix": "photos",
     "thumbs_prefix": "photos_thumb"
+  },
+  "analytics": {
+    "ga4": "G-ZF2C0JWMQK",
+    "clarity": "v4al5ahmfx"
+  },
+  "ui": {
+    "theme_default": "dark"
   }
 }

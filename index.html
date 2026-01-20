@@ -11,9 +11,9 @@
 <body>
   <header class="topbar">
     <div class="toprow">
-      <a class="homebtn" id="homeBtn" href="#/" aria-label="Home">4Runner</a>
+      <a class="homebtn" id="homeBtn" href="#/" aria-label="Home"><span class="home-title">4Runner 2003 4.7 Limited</span></a>
+<button id="themeBtn" class="btn" type="button" aria-label="Theme">🌓</button>
       <div class="brand">
-        <div class="title" id="brandTitle" data-i18n="brandTitle">4Runner 2003 4.7 Limited</div>
         <div class="subtitle" id="brandSubtitle" data-i18n="brandSubtitle">Поиск по номеру запчасти и по описанию</div>
       </div>
 
@@ -27,7 +27,7 @@
     </div>
 
     <div class="controls" id="filtersPanel">
-      <input id="q" type="search" placeholder="Поиск: номер / название / описание..." data-i18n-placeholder="searchPlaceholder" autocomplete="off" />
+      <input id="q" list="searchDatalist" type="search" placeholder="Поиск: номер / название / описание..." data-i18n-placeholder="searchPlaceholder" autocomplete="off" />
       <select id="section">
         <option value="" data-i18n="allSections">Все разделы</option>
       </select>
@@ -39,7 +39,9 @@
       <label class="chk"><input id="onlyWithPhoto" type="checkbox" /> <span data-i18n="onlyWithPhoto">Только с фото</span></label>
       <button id="clear" type="button" data-i18n="clear">Очистить</button>
     </div>
-  </header>
+  
+<datalist id="searchDatalist"></datalist>
+</header>
 
   <main class="container">
     <div id="stats" class="stats"></div>
@@ -68,5 +70,19 @@
 
   <!-- Gallery modal removed: detail view uses Amazon-style hover zoom -->
 
+
+<div id="quickPreview" class="quick-preview" aria-hidden="true">
+  <img id="qpImg" class="qp-img" alt="">
+  <div class="qp-body">
+    <div id="qpTitle" class="qp-title"></div>
+    <div id="qpMeta" class="qp-meta"></div>
+  </div>
+</div>
+
+<div class="mobile-actions" id="mobileActions">
+  <a id="mCall" href="tel:+37441153113">📞 Զանգել</a>
+  <a id="mWa" href="https://wa.me/375336478686" target="_blank" rel="noopener">💬 WhatsApp</a>
+  <a id="mTg" href="https://t.me/alexfridman" target="_blank" rel="noopener">✈️ Telegram</a>
+</div>
 </body>
 </html>
