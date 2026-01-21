@@ -1105,6 +1105,7 @@ function handleRoute(){
     }
   }
 }
+}
 
 
 async function main(){
@@ -1195,6 +1196,7 @@ async function main(){
   });
 
   interceptLinks();
+  bindCardClicks();
 
   // Mobile header collapse
   const ft = $("filtersToggle");

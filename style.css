@@ -108,6 +108,9 @@ a:hover{text-decoration:underline}
 @media (min-width: 1400px){
   .grid{ grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
+/* Detail page card should span full grid width on desktop */
+.grid > .card.detail-page{ grid-column: 1 / -1; width:100%; }
 .card{
   border:1px solid var(--line);
   background:linear-gradient(180deg, #12151d 0%, #0f1117 100%);
