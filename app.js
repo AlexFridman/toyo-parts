@@ -1105,7 +1105,6 @@ function handleRoute(){
     }
   }
 }
-}
 
 
 async function main(){
