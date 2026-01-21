@@ -1222,6 +1222,8 @@ async function initClarityFromConfig(){
   }
 }
 
+window.addEventListener('DOMContentLoaded', ()=>{ initAnalyticsFromConfig(); });
+
 window.addEventListener('DOMContentLoaded', ()=>{ initClarityFromConfig(); });
 
 
