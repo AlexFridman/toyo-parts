@@ -8,6 +8,9 @@
   --accent:#7dd3fc;
   --good:#86efac;
   --warn:#fbbf24;
+  --panel: var(--card);
+  --border: var(--line);
+  --chip: #0f1117;
 }
 *{box-sizing:border-box}
 body{
@@ -35,7 +38,7 @@ a:hover{text-decoration:underline}
   padding:10px 12px;
   border-radius:14px;
   border:1px solid var(--line);
-  background:#0f1117;
+  background:var(--chip);
   color:var(--text);
   font-weight:800;
   letter-spacing:.3px;
@@ -53,16 +56,16 @@ a:hover{text-decoration:underline}
   width:min(520px, 75vw);
   padding:10px 12px;
   border-radius:12px;
-  border:1px solid var(--line);
-  background:#0f1117;
+  border:1px solid var(--border);
+  background:var(--chip);
   color:var(--text);
   outline:none;
 }
 .controls select, .controls button{
   padding:10px 10px;
   border-radius:12px;
-  border:1px solid var(--line);
-  background:#0f1117;
+  border:1px solid var(--border);
+  background:var(--chip);
   color:var(--text);
   outline:none;
 }
@@ -77,7 +80,7 @@ a:hover{text-decoration:underline}
   padding:10px 12px;
   border-radius:12px;
   border:1px solid var(--line);
-  background:#0f1117;
+  background:var(--chip);
   color:var(--text);
   cursor:pointer;
 }
@@ -88,7 +91,7 @@ a:hover{text-decoration:underline}
   padding:8px 12px;
   border-radius:12px;
   border:1px solid var(--line);
-  background:#0f1117;
+  background:var(--chip);
   color:var(--text);
   cursor:pointer;
 }
@@ -96,8 +99,14 @@ a:hover{text-decoration:underline}
 .detailpos{color:var(--muted); font-size:13px}
 .grid{
   display:grid;
-  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap:12px;
+}
+@media (min-width: 1060px){
+  .grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 1400px){
+  .grid{ grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 .card{
   border:1px solid var(--line);
@@ -220,7 +229,7 @@ a:hover{text-decoration:underline}
 .dot{margin:0 8px; color:#3a4a66}
 dialog{
   border:1px solid var(--line);
-  background:#0f1117;
+  background:var(--chip);
   color:var(--text);
   border-radius:16px;
   padding:16px 16px 10px 16px;
@@ -247,7 +256,7 @@ code{background:#0b0c10; border:1px solid var(--line); padding:2px 6px; border-r
   padding:10px 12px;
   border-radius:12px;
   border:1px solid var(--line);
-  background:#0f1117;
+  background:var(--chip);
   color:var(--text);
   font-weight:650;
   white-space:nowrap;
@@ -305,7 +314,7 @@ a.name:hover{text-decoration:underline}
   width:44px; height:44px;
   border-radius:14px;
   border:1px solid rgba(255,255,255,.18);
-  background:rgba(15,17,23,.92);
+  background: color-mix(in oklab, var(--panel) 92%, transparent);
   color:var(--text);
   text-decoration:none;
   font-size:18px;
@@ -360,7 +369,7 @@ a.name:hover{text-decoration:underline}
   overflow-x:auto;
   -webkit-overflow-scrolling: touch;
   border-top:1px solid var(--line);
-  background:#0f1117;
+  background:var(--chip);
   position:relative;
   z-index:2;
 }
@@ -552,16 +561,21 @@ a.name:hover{text-decoration:underline}
   --shadow: 0 10px 30px rgba(0,0,0,0.35);
   --accent: rgba(255,255,255,0.85);
   --chip: rgba(255,255,255,0.06);
+  --panel: var(--card);
+  --border: var(--line);
+  --chip: #0f1117;
 }
 [data-theme="light"]{
   --bg:#f6f7fb;
-  --panel:#ffffff;
+  --card:#ffffff;
+  --panel: #ffffff;
   --text:#0b1320;
   --muted:#344054;
-  --border:rgba(15,23,42,0.14);
-  --shadow: 0 10px 24px rgba(20,30,60,0.10);
-  --accent:#0b1320;
+  --line:rgba(15,23,42,0.14);
+  --border: rgba(15,23,42,0.14);
+  --accent:#0b5fff;
   --chip: rgba(15,23,42,0.06);
+  --shadow: 0 10px 24px rgba(20,30,60,0.10);
 }
 body{ background: var(--bg); color: var(--text); }
 .card, .panel, header, footer{ background: var(--panel); border-color: var(--border); box-shadow: var(--shadow); }
@@ -855,3 +869,7 @@ header *{ color: var(--text); }
 @media (hover: hover) and (pointer: fine){
   .detail-page .zoom-hint{ display:none; }
 }
+
+
+.card.is-clickable{ cursor:pointer; }
+.card.is-clickable:hover{ border-color: color-mix(in oklab, var(--accent) 45%, var(--line)); }

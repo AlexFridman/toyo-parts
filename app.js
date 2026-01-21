@@ -482,7 +482,7 @@ const kv = [];
   }
 
   return `
-  <article class="${cls}" data-id="${escapeHtml(r['_id'])}">
+  <article class="${cls} is-clickable" data-id="${escapeHtml(r['_id'])}" data-href="${partHref(r['_id'])}" tabindex="0" role="link">
     <div class="img ${opts.detail ? 'zoom-wrap' : ''}">
       ${imgUrl ? `
         <img id="detailMain" class="pimg ${opts.detail ? 'detail-main' : 'is-thumb'}" loading="lazy" src="${BLANK_IMG}" data-src="${escapeHtml(mainThumb)}" data-full="${escapeHtml(mainFull)}" alt="${escapeHtml(name)}">
@@ -1035,6 +1035,34 @@ function bindGallery(){
   $("gClose").addEventListener("click", ()=>dlg.close());
 }
 
+function bindCardClicks(){
+  document.addEventListener("click", (e)=>{
+    const card = e.target?.closest?.("article.card.is-clickable[data-id]");
+    if(!card) return;
+    if(CURRENT_MODE !== "list") return;
+
+    // Don't hijack clicks on interactive elements.
+    if(e.target.closest("a, button, input, select, textarea, label")) return;
+
+    const href = card.getAttribute("data-href") || partHref(card.getAttribute("data-id"));
+    if(!href) return;
+
+    // Navigate via hash route
+    location.hash = href;
+  });
+
+  // Keyboard accessibility
+  document.addEventListener("keydown", (e)=>{
+    if(e.key !== "Enter" && e.key !== " ") return;
+    const card = document.activeElement?.closest?.("article.card.is-clickable[data-id]");
+    if(!card) return;
+    if(CURRENT_MODE !== "list") return;
+    e.preventDefault();
+    const href = card.getAttribute("data-href") || partHref(card.getAttribute("data-id"));
+    if(href) location.hash = href;
+  });
+}
+
 function handleRoute(){
   const r = routePath();
   if(r.mode === "part"){
@@ -1053,16 +1081,30 @@ function handleRoute(){
       $("stats").textContent = I18N[LANG].notFound;
       $("cards").innerHTML = "";
     }
-  }else{
+    }else{
+    const prevMode = CURRENT_MODE;
     CURRENT_MODE = "list";
     render(currentFiltered());
     setPageMetaList();
-    // Restore scroll position after render
-    const st = loadUiState();
-    if(st && typeof st.scrollY === "number" && st.scrollY > 0){
-      setTimeout(()=>{ window.scrollTo(0, st.scrollY); }, 0);
+
+    // Restore scroll ONLY when returning from the detail page.
+    if(prevMode === "part"){
+      const st = loadUiState();
+      if(st && typeof st.scrollY === "number" && st.scrollY > 0){
+        const y = st.scrollY;
+        // Clear stored scroll so refresh/open doesn't jump down unexpectedly.
+        st.scrollY = 0;
+        saveUiState(st);
+        setTimeout(()=>{ window.scrollTo(0, y); }, 0);
+      }else{
+        setTimeout(()=>{ window.scrollTo(0, 0); }, 0);
+      }
+    }else{
+      // New visit or reload: stay at the top.
+      setTimeout(()=>{ window.scrollTo(0, 0); }, 0);
     }
   }
+}
 }
 
 
