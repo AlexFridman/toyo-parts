@@ -196,20 +196,6 @@ function url(rel){
 const $ = (id) => document.getElementById(id);
 
 
-
-function adjustMobileActionsSpacer(){
-  const bar = document.getElementById("mobileActions");
-  if(!bar) return;
-  // offsetHeight is reliable when displayed; fall back to computed height if needed
-  let h = bar.offsetHeight || 0;
-  if(!h){
-    const cs = getComputedStyle(bar);
-    const ph = parseFloat(cs.height || "0");
-    if(ph) h = ph;
-  }
-  document.documentElement.style.setProperty("--mobile-actions-h", `${Math.max(0, h)}px`);
-}
-
 function langFromStorageOrQuery(){
   try{
     const sp = new URLSearchParams(window.location.search || "");
@@ -1091,9 +1077,12 @@ function handleRoute(){
     if(rec){
       renderDetail(rec);
       setPageMetaPart(rec);
+      // Always start detail page at the top (SPA keeps previous scroll otherwise)
+      setTimeout(()=>{ try{ window.scrollTo(0,0); }catch(e){} }, 0);
     }else{
       $("stats").textContent = I18N[LANG].notFound;
       $("cards").innerHTML = "";
+      setTimeout(()=>{ try{ window.scrollTo(0,0); }catch(e){} }, 0);
     }
     }else{
     const prevMode = CURRENT_MODE;
@@ -1249,11 +1238,6 @@ main().catch(err => {
 
 
 window.addEventListener("DOMContentLoaded", ()=>{
-  adjustMobileActionsSpacer();
-  window.addEventListener("resize", adjustMobileActionsSpacer);
-  if (window.visualViewport) window.visualViewport.addEventListener("resize", adjustMobileActionsSpacer);
-  window.addEventListener("load", adjustMobileActionsSpacer);
-
   const c = $("callBtn"); if(c) c.addEventListener("click", ()=>gaEvent("contact_call", { from: String(location.hash||""), part_id: (String(location.hash||"").startsWith("#/part/") ? String(location.hash).split("/").pop() : "") }));
   const w = $("waBtn"); if(w) w.addEventListener("click", ()=>gaEvent("contact_whatsapp", { from: String(location.hash||""), part_id: (String(location.hash||"").startsWith("#/part/") ? String(location.hash).split("/").pop() : "") }));
   const t = $("tgBtn"); if(t) t.addEventListener("click", ()=>gaEvent("contact_telegram", { from: String(location.hash||""), part_id: (String(location.hash||"").startsWith("#/part/") ? String(location.hash).split("/").pop() : "") }));
@@ -1614,116 +1598,32 @@ function haptic(type="light"){
   }catch(e){}
 }
 
-function initBottomSheet(){
-  const overlay = document.getElementById("sheetOverlay");
-  const sheet = document.getElementById("bottomSheet");
-  const closeBtn = document.getElementById("sheetClose");
-  const handle = document.getElementById("sheetHandle");
-  if(!overlay || !sheet || !closeBtn || !handle) return;
+function initBottomSheet(){ /* removed */ }
 
-  const mq = window.matchMedia && window.matchMedia('(max-width: 900px)');
-
-  function setLangTexts(){
-    const hy = (LANG === "hy");
-    const title = document.getElementById("sheetTitle");
-    const call = document.getElementById("sheetCall");
-    if(title) title.textContent = hy ? "Կոնտակտներ" : "Контакты";
-    if(call) call.querySelector(".sa-txt").textContent = hy ? "Զանգել" : "Позвонить";
+function adjustMobileActionsSpacer(){
+  const bar = document.getElementById("mobileActions");
+  if(!bar) return;
+  const h = bar.getBoundingClientRect().height || bar.offsetHeight || 0;
+  if(h>0){
+    document.documentElement.style.setProperty("--mobile-actions-h", `${Math.ceil(h)}px`);
   }
-
-  function openSheet(){
-    setLangTexts();
-    overlay.classList.add("on");
-    sheet.classList.add("on");
-    overlay.setAttribute("aria-hidden","false");
-    sheet.setAttribute("aria-hidden","false");
-    document.body.classList.add("sheet-open");
-    haptic("light");
-    gaEvent("sheet_open", { from: String(location.hash||"") });
-  }
-
-  function closeSheet(reason="close"){
-    overlay.classList.remove("on");
-    sheet.classList.remove("on");
-    overlay.setAttribute("aria-hidden","true");
-    sheet.setAttribute("aria-hidden","true");
-    document.body.classList.remove("sheet-open");
-    haptic("light");
-    gaEvent("sheet_close", { reason });
-  }
-
-  overlay.addEventListener("click", ()=>closeSheet("overlay"));
-  closeBtn.addEventListener("click", ()=>closeSheet("x"));
-
-  // Drag to close
-  let startY = 0;
-  let dragging = false;
-
-  function onStart(ev){
-    dragging = true;
-    startY = (ev.touches ? ev.touches[0].clientY : ev.clientY);
-    sheet.style.transition = "none";
-  }
-  function onMove(ev){
-    if(!dragging) return;
-    const y = (ev.touches ? ev.touches[0].clientY : ev.clientY);
-    const dy = y - startY; // down positive
-    const next = 10 - dy;
-    sheet.style.bottom = next + "px";
-  }
-  function onEnd(){
-    if(!dragging) return;
-    dragging = false;
-    sheet.style.transition = "";
-    const curBottom = parseFloat(getComputedStyle(sheet).bottom || "10");
-    sheet.style.bottom = "";
-    if(curBottom < -120){
-      closeSheet("drag");
-    }else{
-      sheet.classList.add("on");
-    }
-  }
-
-  handle.addEventListener("touchstart", onStart, { passive: true });
-  handle.addEventListener("touchmove", onMove, { passive: true });
-  handle.addEventListener("touchend", onEnd);
-  handle.addEventListener("mousedown", onStart);
-  window.addEventListener("mousemove", onMove);
-  window.addEventListener("mouseup", onEnd);
-
-  // Wire mobile bar buttons to open sheet instead of navigating
-  const mCall = document.getElementById("mCall");
-  const mWa = document.getElementById("mWa");
-  const mTg = document.getElementById("mTg");
-  [mCall,mWa,mTg].forEach(btn=>{
-    if(!btn) return;
-    btn.addEventListener("click", (e)=>{
-      if(mq && mq.matches){
-        e.preventDefault();
-        openSheet();
-      }
-    });
-  });
-
-  // Track action clicks inside sheet + haptic
-  const partId = ()=> (String(location.hash||"").startsWith("#/part/") ? String(location.hash).split("/").pop() : "");
-  const sCall = document.getElementById("sheetCall");
-  const sWa = document.getElementById("sheetWa");
-  const sTg = document.getElementById("sheetTg");
-  if(sCall) sCall.addEventListener("click", ()=>{ haptic("medium"); gaEvent("sheet_action", { action:"call", part_id: partId() }); });
-  if(sWa) sWa.addEventListener("click", ()=>{ haptic("medium"); gaEvent("sheet_action", { action:"whatsapp", part_id: partId() }); });
-  if(sTg) sTg.addEventListener("click", ()=>{ haptic("medium"); gaEvent("sheet_action", { action:"telegram", part_id: partId() }); });
-
-  window.addEventListener("hashchange", ()=>{
-    if(sheet.classList.contains("on")){
-      closeSheet("nav");
-    }
-  });
-
-  window.__openSheet = openSheet;
-  window.__closeSheet = closeSheet;
 }
-window.addEventListener("DOMContentLoaded", ()=>{ initBottomSheet(); });
+
+function setupMobileActionsSpacer(){
+  adjustMobileActionsSpacer();
+  window.addEventListener("resize", adjustMobileActionsSpacer, {passive:true});
+  if(window.visualViewport){
+    window.visualViewport.addEventListener("resize", adjustMobileActionsSpacer, {passive:true});
+  }
+  try{
+    const bar = document.getElementById("mobileActions");
+    if(bar && "ResizeObserver" in window){
+      const ro = new ResizeObserver(()=>adjustMobileActionsSpacer());
+      ro.observe(bar);
+    }
+  }catch(e){}
+}
+window.addEventListener("DOMContentLoaded", setupMobileActionsSpacer);
 
 function initCardClickOpen(){
   // On touch devices: tap anywhere on a card to open detail (except controls)
