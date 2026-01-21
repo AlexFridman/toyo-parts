@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="style.css" />
   <script defer src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
   <script defer src="app.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 <body>
   <header class="topbar">
@@ -62,13 +63,7 @@
   </footer>
 
   <!-- Mobile bottom actions -->
-  <div class="mobile-actions" id="mobileActions">
-    <a class="mact call" href="tel:+37441153113">📞</a>
-    <a class="mact wa" href="https://wa.me/375336478686" target="_blank" rel="noopener">💬</a>
-    <a class="mact tg" href="https://t.me/alexfridman" target="_blank" rel="noopener">✈️</a>
-  </div>
-
-  <!-- Gallery modal removed: detail view uses Amazon-style hover zoom -->
+<!-- Gallery modal removed: detail view uses Amazon-style hover zoom -->
 
 
 <div id="quickPreview" class="quick-preview" aria-hidden="true">
@@ -78,14 +73,6 @@
     <div id="qpMeta" class="qp-meta"></div>
   </div>
 </div>
-
-<div class="mobile-actions" id="mobileActions">
-  <a id="mCall" href="tel:+37441153113">📞 Զանգել</a>
-  <a id="mWa" href="https://wa.me/375336478686" target="_blank" rel="noopener"><span class="icon-wa"></span> WhatsApp</a>
-  <a id="mTg" href="https://t.me/alexfridman" target="_blank" rel="noopener"><span class="icon-tg"></span> Telegram</a>
-</div>
-
-<div id="sheetOverlay" class="sheet-overlay" aria-hidden="true"></div>
 <div id="bottomSheet" class="bottom-sheet" role="dialog" aria-modal="true" aria-hidden="true">
   <div class="sheet-handle" id="sheetHandle" aria-label="Drag handle"></div>
   <div class="sheet-header">
@@ -98,6 +85,18 @@
     <a class="sheet-action" id="sheetTg" href="https://t.me/alexfridman" target="_blank" rel="noopener"><span class="sa-ico"><span class="icon-tg"></span></span><span class="sa-txt">Telegram</span></a>
   </div>
 </div>
+
+  <div class="mobile-actions" id="mobileActions" aria-label="Quick contact">
+    <a class="mact call" href="tel:+37441153113" aria-label="Call">
+      <i class="bi bi-telephone-fill" aria-hidden="true"></i>
+    </a>
+    <a class="mact wa" href="https://wa.me/375336478686" target="_blank" rel="noopener" aria-label="WhatsApp">
+      <i class="bi bi-whatsapp" aria-hidden="true"></i>
+    </a>
+    <a class="mact tg" href="https://t.me/alexfridman" target="_blank" rel="noopener" aria-label="Telegram">
+      <i class="bi bi-telegram" aria-hidden="true"></i>
+    </a>
+  </div>
 
 </body>
 </html>

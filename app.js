@@ -196,6 +196,20 @@ function url(rel){
 const $ = (id) => document.getElementById(id);
 
 
+
+function adjustMobileActionsSpacer(){
+  const bar = document.getElementById("mobileActions");
+  if(!bar) return;
+  // offsetHeight is reliable when displayed; fall back to computed height if needed
+  let h = bar.offsetHeight || 0;
+  if(!h){
+    const cs = getComputedStyle(bar);
+    const ph = parseFloat(cs.height || "0");
+    if(ph) h = ph;
+  }
+  document.documentElement.style.setProperty("--mobile-actions-h", `${Math.max(0, h)}px`);
+}
+
 function langFromStorageOrQuery(){
   try{
     const sp = new URLSearchParams(window.location.search || "");
@@ -485,7 +499,7 @@ const kv = [];
   <article class="${cls} is-clickable" data-id="${escapeHtml(r['_id'])}" data-href="${partHref(r['_id'])}" tabindex="0" role="link">
     <div class="img ${opts.detail ? 'zoom-wrap' : ''}">
       ${imgUrl ? `
-        <img id="detailMain" class="pimg ${opts.detail ? 'detail-main' : 'is-thumb'}" loading="lazy" decoding="async" src="${BLANK_IMG}" data-src="${escapeHtml(mainThumb)}" data-full="${escapeHtml(mainFull)}" alt="${escapeHtml(name)}">
+        <img id="detailMain" class="pimg ${opts.detail ? 'detail-main' : 'is-thumb'}" loading="lazy" src="${BLANK_IMG}" data-src="${escapeHtml(mainThumb)}" data-full="${escapeHtml(mainFull)}" alt="${escapeHtml(name)}">
         ${opts.detail ? `<div id="zoomPane" class="zoom-pane" aria-hidden="true"></div>` : ``}
       ` : `<div>${escapeHtml(I18N[LANG].noPhoto)}</div>`}
       ${badges.length ? `<div class="badges">${badges.join("")}</div>` : ""}
@@ -582,22 +596,11 @@ async function render(records){
     cards.appendChild(el);
   }
 
-
-// Prioritize the first few thumbs so above-the-fold renders faster.
-try{
-  const topImgs = Array.from(document.querySelectorAll('#cards img[data-src]')).slice(0, 6);
-  topImgs.forEach((im)=>{
-    try{ im.fetchPriority = "high"; }catch(e){}
-  });
-}catch(e){}
-
   // Hover slideshow: on desktop, cycle through thumbnails while hovering the image.
   bindHoverSlides();
 
   // Hydrate lazy images (swap BLANK_IMG -> actual thumb) when they enter viewport.
   setupLazyImages();
-
-  try{ schedulePrefetch(); }catch(e){}
 }
 
 function renderSkeletons(count){
@@ -630,60 +633,13 @@ function setupLazyImages(){
         }
         _imgObserver.unobserve(img);
       }
-    }, { rootMargin: "1200px 0px" });
+    }, { rootMargin: "200px 0px" });
   }
   document.querySelectorAll('img[data-src]').forEach(img=>{
     // Only hydrate images still on placeholder
     if(img.getAttribute('src') === BLANK_IMG) _imgObserver.observe(img);
   });
 }
-
-
-// Prefetch thumbnails ahead of the viewport to reduce "blank" flashes on scroll.
-// We only prefetch thumbs (not full images) and cap the count per run.
-let __pf_timer = null;
-function prefetchNextThumbs(maxToPrefetch = 12, aheadPx = 2200){
-  try{
-    if(typeof CURRENT_MODE !== "undefined" && CURRENT_MODE !== "list") return;
-
-    const imgs = Array.from(document.querySelectorAll('img[data-src]'));
-    if(!imgs.length) return;
-
-    const viewportBottom = (window.scrollY || 0) + (window.innerHeight || 0);
-    let count = 0;
-
-    for(const img of imgs){
-      if(count >= maxToPrefetch) break;
-      if(img.dataset.prefetched === "1") continue;
-
-      const rect = img.getBoundingClientRect();
-      const top = rect.top + (window.scrollY || 0);
-
-      // Prefetch images that are within "aheadPx" below the viewport.
-      if(top > viewportBottom + aheadPx) continue;
-
-      const src = img.getAttribute("data-src");
-      if(!src) continue;
-
-      const pre = new Image();
-      pre.decoding = "async";
-      pre.src = src;
-
-      img.dataset.prefetched = "1";
-      count++;
-    }
-  }catch(e){}
-}
-
-function schedulePrefetch(){
-  try{
-    if(__pf_timer) clearTimeout(__pf_timer);
-    __pf_timer = setTimeout(()=>prefetchNextThumbs(12, 2400), 220);
-  }catch(e){}
-}
-
-window.addEventListener("scroll", schedulePrefetch, { passive: true });
-window.addEventListener("resize", schedulePrefetch);
 
 
 function bindDetailThumbs(id){
@@ -1293,6 +1249,11 @@ main().catch(err => {
 
 
 window.addEventListener("DOMContentLoaded", ()=>{
+  adjustMobileActionsSpacer();
+  window.addEventListener("resize", adjustMobileActionsSpacer);
+  if (window.visualViewport) window.visualViewport.addEventListener("resize", adjustMobileActionsSpacer);
+  window.addEventListener("load", adjustMobileActionsSpacer);
+
   const c = $("callBtn"); if(c) c.addEventListener("click", ()=>gaEvent("contact_call", { from: String(location.hash||""), part_id: (String(location.hash||"").startsWith("#/part/") ? String(location.hash).split("/").pop() : "") }));
   const w = $("waBtn"); if(w) w.addEventListener("click", ()=>gaEvent("contact_whatsapp", { from: String(location.hash||""), part_id: (String(location.hash||"").startsWith("#/part/") ? String(location.hash).split("/").pop() : "") }));
   const t = $("tgBtn"); if(t) t.addEventListener("click", ()=>gaEvent("contact_telegram", { from: String(location.hash||""), part_id: (String(location.hash||"").startsWith("#/part/") ? String(location.hash).split("/").pop() : "") }));
