@@ -1,7 +1,7 @@
 {
   "meta": {
-    "source_csv": "4runner РАЗБОР - Запчасти-17.csv",
-    "count": 365,
+    "source_csv": "4runner РАЗБОР - Запчасти-18.csv",
+    "count": 366,
     "only_available": false,
     "has_availability": false,
     "has_photos_index": true,
@@ -12811,6 +12811,42 @@
       "Раздел": "",
       "Номер запчасти": "47547-35020",
       "Коробка": "42",
+      "Есть фото": "TRUE",
+      "Есть повреждения": "",
+      "Нормализованное название": "",
+      "Каталожное название": "",
+      "Название_hy": "",
+      "Есть повреждения_hy": "",
+      "Тюнинг": "",
+      "Нормализованное название_hy": "",
+      "Раздел_hy": "",
+      "Детальная категория": "",
+      "Детальная категория_hy": "",
+      "Каталожное название_hy": "",
+      "Описание": "",
+      "Описание_hy": ""
+    },
+    {
+      "_id": "373",
+      "_row": 365,
+      "_search": "373 | Внешний ШРУС с валом TOYOTA (оригинал)",
+      "images_full": [
+        "https://toyo-parts-photos.s3.eu-central-1.amazonaws.com/photos/373/IMG_5564.jpg",
+        "https://toyo-parts-photos.s3.eu-central-1.amazonaws.com/photos/373/IMG_5565.jpg",
+        "https://toyo-parts-photos.s3.eu-central-1.amazonaws.com/photos/373/IMG_5566.jpg"
+      ],
+      "images_thumb": [
+        "https://toyo-parts-photos.s3.eu-central-1.amazonaws.com/photos_thumb/373/IMG_5564.jpg",
+        "https://toyo-parts-photos.s3.eu-central-1.amazonaws.com/photos_thumb/373/IMG_5565.jpg",
+        "https://toyo-parts-photos.s3.eu-central-1.amazonaws.com/photos_thumb/373/IMG_5566.jpg"
+      ],
+      "Цена": "",
+      "Приоритет": "95",
+      "Номер": "373",
+      "Название": "Внешний ШРУС с валом TOYOTA (оригинал)",
+      "Раздел": "",
+      "Номер запчасти": "",
+      "Коробка": "",
       "Есть фото": "TRUE",
       "Есть повреждения": "",
       "Нормализованное название": "",
