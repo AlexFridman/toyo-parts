@@ -3853,6 +3853,26 @@
       "https://toyo-parts-photos.s3.eu-central-1.amazonaws.com/photos_thumb/344/IMG_5511.jpg"
     ]
   },
+  "345": {
+    "full": [
+      "https://toyo-parts-photos.s3.eu-central-1.amazonaws.com/photos/345/0.jpg",
+      "https://toyo-parts-photos.s3.eu-central-1.amazonaws.com/photos/345/1.jpg",
+      "https://toyo-parts-photos.s3.eu-central-1.amazonaws.com/photos/345/IMG_4296 2.jpg"
+    ],
+    "thumb": [
+      "https://toyo-parts-photos.s3.eu-central-1.amazonaws.com/photos_thumb/345/0.jpg",
+      "https://toyo-parts-photos.s3.eu-central-1.amazonaws.com/photos_thumb/345/1.jpg",
+      "https://toyo-parts-photos.s3.eu-central-1.amazonaws.com/photos_thumb/345/IMG_4296 2.jpg"
+    ]
+  },
+  "353": {
+    "full": [
+      "https://toyo-parts-photos.s3.eu-central-1.amazonaws.com/photos/353/IMG_5463.jpg"
+    ],
+    "thumb": [
+      "https://toyo-parts-photos.s3.eu-central-1.amazonaws.com/photos_thumb/353/IMG_5463.jpg"
+    ]
+  },
   "357": {
     "full": [
       "https://toyo-parts-photos.s3.eu-central-1.amazonaws.com/photos/357/IMG_5372.jpg",
@@ -3861,6 +3881,16 @@
     "thumb": [
       "https://toyo-parts-photos.s3.eu-central-1.amazonaws.com/photos_thumb/357/IMG_5372.jpg",
       "https://toyo-parts-photos.s3.eu-central-1.amazonaws.com/photos_thumb/357/IMG_5373.jpg"
+    ]
+  },
+  "359": {
+    "full": [
+      "https://toyo-parts-photos.s3.eu-central-1.amazonaws.com/photos/359/IMG_5496 2.jpg",
+      "https://toyo-parts-photos.s3.eu-central-1.amazonaws.com/photos/359/IMG_5507 2.jpg"
+    ],
+    "thumb": [
+      "https://toyo-parts-photos.s3.eu-central-1.amazonaws.com/photos_thumb/359/IMG_5496 2.jpg",
+      "https://toyo-parts-photos.s3.eu-central-1.amazonaws.com/photos_thumb/359/IMG_5507 2.jpg"
     ]
   },
   "362": {
