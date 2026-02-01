@@ -203,14 +203,6 @@ def sanity_checks(df: pd.DataFrame, photos: Dict[str, Dict[str, List[str]]]) -> 
         if dup:
             print(f"[WARN] duplicate Номер values (may break routing): {dup[:20]}" + (" ..." if len(dup) > 20 else ""))
 
-    # Availability values quality
-    if "Наличие" in df.columns:
-        raw = [norm_str(x) for x in df["Наличие"].tolist() if norm_str(x)]
-        bad = [v for v in raw if to_bool(v) is None]
-        if bad:
-            sample = sorted(set(bad))[:20]
-            print(f"[WARN] unrecognized Наличие values (won't filter): {sample}")
-
     # HY coverage (optional)
     hy_cols = [c for c in TEXT_COLS_HY if c in df.columns]
     if hy_cols:
@@ -238,7 +230,7 @@ def build_items(
 ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     items: List[Dict[str, Any]] = []
 
-    has_avail = "Наличие" in df.columns
+    has_avail = "Статус" in df.columns
 
     for idx, row in df.iterrows():
         fields: Dict[str, Any] = {c: clean_val(row.get(c, "")) for c in df.columns}
@@ -253,13 +245,10 @@ def build_items(
         # Availability filtering
         available: Optional[bool] = None
         if has_avail:
-            available = to_bool(fields.get("Наличие"))
-            if available is None:
-                # unknown value: do not filter it out (safe choice)
-                pass
-            else:
-                if only_available and available is False:
-                    continue
+            available = fields.get("Статус") != "sold"
+            
+            if only_available and not available:
+                continue
 
         # Photos
         full = (photos.get(_id) or {}).get("full", [])
@@ -269,9 +258,6 @@ def build_items(
             thumb = thumbs.get(_id, [])
 
         has_photo = True if full else False
-
-        # Provide a consistent boolean flag for the UI
-        fields["Есть фото"] = "TRUE" if has_photo else "FALSE"
 
         # Search blob
         search_blob = concat_text(fields, TEXT_COLS_RU)
